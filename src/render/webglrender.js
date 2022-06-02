@@ -1,6 +1,8 @@
 import CubeRender from "./cuberender.js";
 import RectRender from "./rectrender.js";
 import BaseRender from "./baserender.js";
+import CylinderRender from "./cylinderrender.js";
+import HemisphereRender from "./hemisphererender.js"
 
 function createContextGL($canvas) {
     let gl = null;
@@ -41,6 +43,11 @@ class WebGLRender {
 
         this._render = new CubeRender(this._gl, canvas.width, canvas.height);
 
+    }
+
+    updateTexture(rgbabuf, width, height) {
+
+        this._render.updateTexture(rgbabuf, width, height);
     }
 
 

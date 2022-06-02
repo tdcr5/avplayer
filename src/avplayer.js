@@ -23,6 +23,10 @@ class AVPlayer {
         this._render = new CanvasRender(this);
     }
 
+    updateTexture(rgbabuf, width, height) {
+
+        this._render.updateTexture(rgbabuf, width, height);
+    }
 
 
 }

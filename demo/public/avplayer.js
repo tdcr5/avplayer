@@ -403,8 +403,8 @@ void main(void) {
 varying lowp vec2 vTexturePosition;
 uniform sampler2D uTexture; 
 void main(void) {
- // gl_FragColor =  texture2D(uTexture, vTexturePosition);
- gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+  gl_FragColor =  texture2D(uTexture, vTexturePosition);
+ //gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 `;
     var cubeRotation = 0.0;
@@ -542,7 +542,7 @@ void main(void) {
 
     function drawScene(gl, programInfo, buffers, deltaTime, width, height, texture) {
       gl.viewport(0, 0, width, height);
-      gl.clearColor(1.0, 1.0, 1.0, 1.0); // Clear to black, fully opaque
+      gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
 
       gl.clearDepth(1.0); // Clear everything
 
@@ -586,7 +586,7 @@ void main(void) {
       [0, 1, 0]); // axis to rotate around (X)
 
       const viewMatrix = create$1();
-      lookAt(viewMatrix, fromValues(0, 2, 2), fromValues(0, 0, 0), fromValues(0, 1, 0)); // Tell WebGL how to pull out the positions from the position
+      lookAt(viewMatrix, fromValues(0, 2, 3), fromValues(0, 0, 0), fromValues(0, 1, 0)); // Tell WebGL how to pull out the positions from the position
       // buffer into the vertexPosition attribute
 
       {
@@ -709,6 +709,10 @@ void main(void) {
         this._render = new CubeRender(this._gl, canvas.width, canvas.height);
       }
 
+      updateTexture(rgbabuf, width, height) {
+        this._render.updateTexture(rgbabuf, width, height);
+      }
+
     }
 
     class CanvasRender {
@@ -718,14 +722,18 @@ void main(void) {
       constructor(avplayer) {
         this._avplayer = avplayer;
         const $canvasElement = document.createElement("canvas");
-        $canvasElement.style.position = "absolute";
-        $canvasElement.style.top = 0;
-        $canvasElement.style.left = 0;
-        $canvasElement.width = 500;
-        $canvasElement.height = 500;
+        $canvasElement.style.position = "relative";
+        $canvasElement.style.top = '50px';
+        $canvasElement.style.left = '50px';
+        $canvasElement.width = 640;
+        $canvasElement.height = 640;
         this.$videoElement = $canvasElement;
         avplayer.$container.appendChild(this.$videoElement);
         this._webglrender = new WebGLRender($canvasElement, $canvasElement.width, $canvasElement.height);
+      }
+
+      updateTexture(rgbabuf, width, height) {
+        this._webglrender.updateTexture(rgbabuf, width, height);
       }
 
     }
@@ -743,6 +751,10 @@ void main(void) {
         this._options = Object.assign({}, DEFAULT_PLAYER_OPTIONS, options);
         this.$container = this._options.container;
         this._render = new CanvasRender(this);
+      }
+
+      updateTexture(rgbabuf, width, height) {
+        this._render.updateTexture(rgbabuf, width, height);
       }
 
     }

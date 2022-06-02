@@ -15,6 +15,33 @@
 <script type="module">
 "use strict";
 
+function loadImage(url, callback) {
+
+
+
+
+
+  var image = new Image();
+  image.src = url;
+  image.crossOrigin = 'abc';
+  image.onload = ()=>{
+
+    let c = document.createElement("canvas");
+    c.width = image.width;
+    c.height = image.height;
+
+    let ctx = c.getContext('2d');
+
+    ctx.drawImage(image, 0, 0);
+
+    let rgba = ctx.getImageData(0, 0, c.width, c.height).data
+
+
+    callback(rgba, c.width, c.height);
+  };
+  return image;
+}
+
 
 function main() {
 
@@ -24,6 +51,16 @@ function main() {
             container: $container
     };
     let p = new AVPlayer(options);
+
+
+
+
+    let img = loadImage('2.png',(rgba, width, height) => {
+
+
+        p.updateTexture(rgba, width, height);
+
+    })
 
 
 }
