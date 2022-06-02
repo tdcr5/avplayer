@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Document</title>
+    <script src="./avplayer.js"></script>
+</head>
+<body>
+    <div id="container"></div>
+</body>
+</html>
+
+<script type="module">
+"use strict";
+
+
+function main() {
+
+    let $container = document.getElementById('container');
+
+    let options = {
+            container: $container
+    };
+    let p = new AVPlayer(options);
+
+
+}
+
+
+main();
+
+
+
+</script>
