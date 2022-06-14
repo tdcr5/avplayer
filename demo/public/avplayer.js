@@ -721,19 +721,947 @@ void main(void) {
 
       constructor(avplayer) {
         this._avplayer = avplayer;
-        const $canvasElement = document.createElement("canvas");
-        $canvasElement.style.position = "relative";
-        $canvasElement.style.top = '50px';
-        $canvasElement.style.left = '50px';
-        $canvasElement.width = 640;
-        $canvasElement.height = 640;
-        this.$videoElement = $canvasElement;
-        avplayer.$container.appendChild(this.$videoElement);
-        this._webglrender = new WebGLRender($canvasElement, $canvasElement.width, $canvasElement.height);
+        let canvasElement = document.createElement("canvas");
+        canvasElement.style.position = "relative";
+        canvasElement.style.top = '50px';
+        canvasElement.style.left = '50px';
+        canvasElement.width = 640;
+        canvasElement.height = 640;
+        this._videoElement = canvasElement;
+
+        avplayer._container.appendChild(this._videoElement);
+
+        this._webglrender = new WebGLRender(canvasElement, canvasElement.width, canvasElement.height);
       }
 
       updateTexture(rgbabuf, width, height) {
         this._webglrender.updateTexture(rgbabuf, width, height);
+      }
+
+    }
+
+    class Logger {
+      _logEnable = false;
+
+      constructor() {}
+
+      setLogEnable(logEnable) {
+        this._logEnable = logEnable;
+      }
+
+      info(module) {
+        if (this._logEnable) {
+          for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+            args[_key - 1] = arguments[_key];
+          }
+
+          console.log(`AVPlayer: [${module}]`, ...args);
+        }
+      }
+
+      warn(module) {
+        if (this._logEnable) {
+          for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+            args[_key2 - 1] = arguments[_key2];
+          }
+
+          console.warn(`AVPlayer: [${module}]`, ...args);
+        }
+      }
+
+      error(module) {
+        if (this._logEnable) {
+          for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+            args[_key3 - 1] = arguments[_key3];
+          }
+
+          console.error(`AVPlayer: [${module}]`, ...args);
+        }
+      }
+
+    }
+
+    class EventEmitter {
+      on(name, fn, ctx) {
+        const e = this.e || (this.e = {});
+        (e[name] || (e[name] = [])).push({
+          fn,
+          ctx
+        });
+        return this;
+      }
+
+      once(name, fn, ctx) {
+        const self = this;
+
+        function listener() {
+          self.off(name, listener);
+
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+
+          fn.apply(ctx, args);
+        }
+
+        listener._ = fn;
+        return this.on(name, listener, ctx);
+      }
+
+      emit(name) {
+        const evtArr = ((this.e || (this.e = {}))[name] || []).slice();
+
+        for (var _len2 = arguments.length, data = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+          data[_key2 - 1] = arguments[_key2];
+        }
+
+        for (let i = 0; i < evtArr.length; i += 1) {
+          evtArr[i].fn.apply(evtArr[i].ctx, data);
+        }
+
+        return this;
+      }
+
+      off(name, callback) {
+        const e = this.e || (this.e = {});
+
+        if (!name) {
+          Object.keys(e).forEach(key => {
+            delete e[key];
+          });
+          delete this.e;
+          return;
+        }
+
+        const evts = e[name];
+        const liveEvents = [];
+
+        if (evts && callback) {
+          for (let i = 0, len = evts.length; i < len; i += 1) {
+            if (evts[i].fn !== callback && evts[i].fn._ !== callback) liveEvents.push(evts[i]);
+          }
+        }
+
+        if (liveEvents.length) {
+          e[name] = liveEvents;
+        } else {
+          delete e[name];
+        }
+
+        return this;
+      }
+
+    }
+
+    class Bitop {
+      constructor(buffer) {
+        this.buffer = buffer;
+        this.buflen = buffer.length;
+        this.bufpos = 0;
+        this.bufoff = 0;
+        this.iserro = false;
+      }
+
+      read(n) {
+        let v = 0;
+        let d = 0;
+
+        while (n) {
+          if (n < 0 || this.bufpos >= this.buflen) {
+            this.iserro = true;
+            return 0;
+          }
+
+          this.iserro = false;
+          d = this.bufoff + n > 8 ? 8 - this.bufoff : n;
+          v <<= d;
+          v += this.buffer[this.bufpos] >> 8 - this.bufoff - d & 0xff >> 8 - d;
+          this.bufoff += d;
+          n -= d;
+
+          if (this.bufoff == 8) {
+            this.bufpos++;
+            this.bufoff = 0;
+          }
+        }
+
+        return v;
+      }
+
+      look(n) {
+        let p = this.bufpos;
+        let o = this.bufoff;
+        let v = this.read(n);
+        this.bufpos = p;
+        this.bufoff = o;
+        return v;
+      }
+
+      read_golomb() {
+        let n;
+
+        for (n = 0; this.read(1) == 0 && !this.iserro; n++);
+
+        return (1 << n) + this.read(n) - 1;
+      }
+
+    }
+
+    //
+    const AAC_SAMPLE_RATE = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350, 0, 0, 0];
+    const AAC_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 8];
+
+    function getObjectType(bitop) {
+      let audioObjectType = bitop.read(5);
+
+      if (audioObjectType === 31) {
+        audioObjectType = bitop.read(6) + 32;
+      }
+
+      return audioObjectType;
+    }
+
+    function getSampleRate(bitop, info) {
+      info.sampling_index = bitop.read(4);
+      return info.sampling_index == 0x0f ? bitop.read(24) : AAC_SAMPLE_RATE[info.sampling_index];
+    }
+
+    function readAACSpecificConfig(aacSequenceHeader) {
+      let info = {};
+      let bitop = new Bitop(aacSequenceHeader);
+      bitop.read(16);
+      info.object_type = getObjectType(bitop);
+      info.sample_rate = getSampleRate(bitop, info);
+      info.chan_config = bitop.read(4);
+
+      if (info.chan_config < AAC_CHANNELS.length) {
+        info.channels = AAC_CHANNELS[info.chan_config];
+      }
+
+      info.sbr = -1;
+      info.ps = -1;
+
+      if (info.object_type == 5 || info.object_type == 29) {
+        if (info.object_type == 29) {
+          info.ps = 1;
+        }
+
+        info.ext_object_type = 5;
+        info.sbr = 1;
+        info.sample_rate = getSampleRate(bitop, info);
+        info.object_type = getObjectType(bitop);
+      }
+
+      return info;
+    }
+
+    function readH264SpecificConfig(avcSequenceHeader) {
+      let info = {};
+      let profile_idc, width, height, crop_left, crop_right, crop_top, crop_bottom, frame_mbs_only, n, cf_idc, num_ref_frames;
+      let bitop = new Bitop(avcSequenceHeader);
+      bitop.read(48);
+      info.width = 0;
+      info.height = 0;
+
+      do {
+        info.profile = bitop.read(8);
+        info.compat = bitop.read(8);
+        info.level = bitop.read(8);
+        info.nalu = (bitop.read(8) & 0x03) + 1;
+        info.nb_sps = bitop.read(8) & 0x1F;
+
+        if (info.nb_sps == 0) {
+          break;
+        }
+        /* nal size */
+
+
+        bitop.read(16);
+        /* nal type */
+
+        if (bitop.read(8) != 0x67) {
+          break;
+        }
+        /* SPS */
+
+
+        profile_idc = bitop.read(8);
+        /* flags */
+
+        bitop.read(8);
+        /* level idc */
+
+        bitop.read(8);
+        /* SPS id */
+
+        bitop.read_golomb();
+
+        if (profile_idc == 100 || profile_idc == 110 || profile_idc == 122 || profile_idc == 244 || profile_idc == 44 || profile_idc == 83 || profile_idc == 86 || profile_idc == 118) {
+          /* chroma format idc */
+          cf_idc = bitop.read_golomb();
+
+          if (cf_idc == 3) {
+            /* separate color plane */
+            bitop.read(1);
+          }
+          /* bit depth luma - 8 */
+
+
+          bitop.read_golomb();
+          /* bit depth chroma - 8 */
+
+          bitop.read_golomb();
+          /* qpprime y zero transform bypass */
+
+          bitop.read(1);
+          /* seq scaling matrix present */
+
+          if (bitop.read(1)) {
+            for (n = 0; n < (cf_idc != 3 ? 8 : 12); n++) {
+              /* seq scaling list present */
+              if (bitop.read(1)) ;
+            }
+          }
+        }
+        /* log2 max frame num */
+
+
+        bitop.read_golomb();
+        /* pic order cnt type */
+
+        switch (bitop.read_golomb()) {
+          case 0:
+            /* max pic order cnt */
+            bitop.read_golomb();
+            break;
+
+          case 1:
+            /* delta pic order alwys zero */
+            bitop.read(1);
+            /* offset for non-ref pic */
+
+            bitop.read_golomb();
+            /* offset for top to bottom field */
+
+            bitop.read_golomb();
+            /* num ref frames in pic order */
+
+            num_ref_frames = bitop.read_golomb();
+
+            for (n = 0; n < num_ref_frames; n++) {
+              /* offset for ref frame */
+              bitop.read_golomb();
+            }
+
+        }
+        /* num ref frames */
+
+
+        info.avc_ref_frames = bitop.read_golomb();
+        /* gaps in frame num allowed */
+
+        bitop.read(1);
+        /* pic width in mbs - 1 */
+
+        width = bitop.read_golomb();
+        /* pic height in map units - 1 */
+
+        height = bitop.read_golomb();
+        /* frame mbs only flag */
+
+        frame_mbs_only = bitop.read(1);
+
+        if (!frame_mbs_only) {
+          /* mbs adaprive frame field */
+          bitop.read(1);
+        }
+        /* direct 8x8 inference flag */
+
+
+        bitop.read(1);
+        /* frame cropping */
+
+        if (bitop.read(1)) {
+          crop_left = bitop.read_golomb();
+          crop_right = bitop.read_golomb();
+          crop_top = bitop.read_golomb();
+          crop_bottom = bitop.read_golomb();
+        } else {
+          crop_left = 0;
+          crop_right = 0;
+          crop_top = 0;
+          crop_bottom = 0;
+        }
+
+        info.level = info.level / 10.0;
+        info.width = (width + 1) * 16 - (crop_left + crop_right) * 2;
+        info.height = (2 - frame_mbs_only) * (height + 1) * 16 - (crop_top + crop_bottom) * 2;
+      } while (0);
+
+      return info;
+    }
+
+    function HEVCParsePtl(bitop, hevc, max_sub_layers_minus1) {
+      let general_ptl = {};
+      general_ptl.profile_space = bitop.read(2);
+      general_ptl.tier_flag = bitop.read(1);
+      general_ptl.profile_idc = bitop.read(5);
+      general_ptl.profile_compatibility_flags = bitop.read(32);
+      general_ptl.general_progressive_source_flag = bitop.read(1);
+      general_ptl.general_interlaced_source_flag = bitop.read(1);
+      general_ptl.general_non_packed_constraint_flag = bitop.read(1);
+      general_ptl.general_frame_only_constraint_flag = bitop.read(1);
+      bitop.read(32);
+      bitop.read(12);
+      general_ptl.level_idc = bitop.read(8);
+      general_ptl.sub_layer_profile_present_flag = [];
+      general_ptl.sub_layer_level_present_flag = [];
+
+      for (let i = 0; i < max_sub_layers_minus1; i++) {
+        general_ptl.sub_layer_profile_present_flag[i] = bitop.read(1);
+        general_ptl.sub_layer_level_present_flag[i] = bitop.read(1);
+      }
+
+      if (max_sub_layers_minus1 > 0) {
+        for (let i = max_sub_layers_minus1; i < 8; i++) {
+          bitop.read(2);
+        }
+      }
+
+      general_ptl.sub_layer_profile_space = [];
+      general_ptl.sub_layer_tier_flag = [];
+      general_ptl.sub_layer_profile_idc = [];
+      general_ptl.sub_layer_profile_compatibility_flag = [];
+      general_ptl.sub_layer_progressive_source_flag = [];
+      general_ptl.sub_layer_interlaced_source_flag = [];
+      general_ptl.sub_layer_non_packed_constraint_flag = [];
+      general_ptl.sub_layer_frame_only_constraint_flag = [];
+      general_ptl.sub_layer_level_idc = [];
+
+      for (let i = 0; i < max_sub_layers_minus1; i++) {
+        if (general_ptl.sub_layer_profile_present_flag[i]) {
+          general_ptl.sub_layer_profile_space[i] = bitop.read(2);
+          general_ptl.sub_layer_tier_flag[i] = bitop.read(1);
+          general_ptl.sub_layer_profile_idc[i] = bitop.read(5);
+          general_ptl.sub_layer_profile_compatibility_flag[i] = bitop.read(32);
+          general_ptl.sub_layer_progressive_source_flag[i] = bitop.read(1);
+          general_ptl.sub_layer_interlaced_source_flag[i] = bitop.read(1);
+          general_ptl.sub_layer_non_packed_constraint_flag[i] = bitop.read(1);
+          general_ptl.sub_layer_frame_only_constraint_flag[i] = bitop.read(1);
+          bitop.read(32);
+          bitop.read(12);
+        }
+
+        if (general_ptl.sub_layer_level_present_flag[i]) {
+          general_ptl.sub_layer_level_idc[i] = bitop.read(8);
+        } else {
+          general_ptl.sub_layer_level_idc[i] = 1;
+        }
+      }
+
+      return general_ptl;
+    }
+
+    function HEVCParseSPS(SPS, hevc) {
+      let psps = {};
+      let NumBytesInNALunit = SPS.length;
+      let rbsp_array = [];
+      let bitop = new Bitop(SPS);
+      bitop.read(1); //forbidden_zero_bit
+
+      bitop.read(6); //nal_unit_type
+
+      bitop.read(6); //nuh_reserved_zero_6bits
+
+      bitop.read(3); //nuh_temporal_id_plus1
+
+      for (let i = 2; i < NumBytesInNALunit; i++) {
+        if (i + 2 < NumBytesInNALunit && bitop.look(24) == 0x000003) {
+          rbsp_array.push(bitop.read(8));
+          rbsp_array.push(bitop.read(8));
+          i += 2;
+          bitop.read(8);
+          /* equal to 0x03 */
+        } else {
+          rbsp_array.push(bitop.read(8));
+        }
+      }
+
+      let rbsp = new Uint8Array(rbsp_array);
+      let rbspBitop = new Bitop(rbsp);
+      psps.sps_video_parameter_set_id = rbspBitop.read(4);
+      psps.sps_max_sub_layers_minus1 = rbspBitop.read(3);
+      psps.sps_temporal_id_nesting_flag = rbspBitop.read(1);
+      psps.profile_tier_level = HEVCParsePtl(rbspBitop, hevc, psps.sps_max_sub_layers_minus1);
+      psps.sps_seq_parameter_set_id = rbspBitop.read_golomb();
+      psps.chroma_format_idc = rbspBitop.read_golomb();
+
+      if (psps.chroma_format_idc == 3) {
+        psps.separate_colour_plane_flag = rbspBitop.read(1);
+      } else {
+        psps.separate_colour_plane_flag = 0;
+      }
+
+      psps.pic_width_in_luma_samples = rbspBitop.read_golomb();
+      psps.pic_height_in_luma_samples = rbspBitop.read_golomb();
+      psps.conformance_window_flag = rbspBitop.read(1);
+
+      if (psps.conformance_window_flag) {
+        let vert_mult = 1 + (psps.chroma_format_idc < 2);
+        let horiz_mult = 1 + (psps.chroma_format_idc < 3);
+        psps.conf_win_left_offset = rbspBitop.read_golomb() * horiz_mult;
+        psps.conf_win_right_offset = rbspBitop.read_golomb() * horiz_mult;
+        psps.conf_win_top_offset = rbspBitop.read_golomb() * vert_mult;
+        psps.conf_win_bottom_offset = rbspBitop.read_golomb() * vert_mult;
+      } // Logger.debug(psps);
+
+
+      return psps;
+    }
+
+    function readHEVCSpecificConfig(hevcSequenceHeader) {
+      let info = {};
+      info.width = 0;
+      info.height = 0;
+      info.profile = 0;
+      info.level = 0; // let bitop = new Bitop(hevcSequenceHeader);
+      // bitop.read(48);
+
+      hevcSequenceHeader = hevcSequenceHeader.slice(5);
+
+      do {
+        let hevc = {};
+
+        if (hevcSequenceHeader.length < 23) {
+          break;
+        }
+
+        hevc.configurationVersion = hevcSequenceHeader[0];
+
+        if (hevc.configurationVersion != 1) {
+          break;
+        }
+
+        hevc.general_profile_space = hevcSequenceHeader[1] >> 6 & 0x03;
+        hevc.general_tier_flag = hevcSequenceHeader[1] >> 5 & 0x01;
+        hevc.general_profile_idc = hevcSequenceHeader[1] & 0x1F;
+        hevc.general_profile_compatibility_flags = hevcSequenceHeader[2] << 24 | hevcSequenceHeader[3] << 16 | hevcSequenceHeader[4] << 8 | hevcSequenceHeader[5];
+        hevc.general_constraint_indicator_flags = hevcSequenceHeader[6] << 24 | hevcSequenceHeader[7] << 16 | hevcSequenceHeader[8] << 8 | hevcSequenceHeader[9];
+        hevc.general_constraint_indicator_flags = hevc.general_constraint_indicator_flags << 16 | hevcSequenceHeader[10] << 8 | hevcSequenceHeader[11];
+        hevc.general_level_idc = hevcSequenceHeader[12];
+        hevc.min_spatial_segmentation_idc = (hevcSequenceHeader[13] & 0x0F) << 8 | hevcSequenceHeader[14];
+        hevc.parallelismType = hevcSequenceHeader[15] & 0x03;
+        hevc.chromaFormat = hevcSequenceHeader[16] & 0x03;
+        hevc.bitDepthLumaMinus8 = hevcSequenceHeader[17] & 0x07;
+        hevc.bitDepthChromaMinus8 = hevcSequenceHeader[18] & 0x07;
+        hevc.avgFrameRate = hevcSequenceHeader[19] << 8 | hevcSequenceHeader[20];
+        hevc.constantFrameRate = hevcSequenceHeader[21] >> 6 & 0x03;
+        hevc.numTemporalLayers = hevcSequenceHeader[21] >> 3 & 0x07;
+        hevc.temporalIdNested = hevcSequenceHeader[21] >> 2 & 0x01;
+        hevc.lengthSizeMinusOne = hevcSequenceHeader[21] & 0x03;
+        let numOfArrays = hevcSequenceHeader[22];
+        let p = hevcSequenceHeader.slice(23);
+
+        for (let i = 0; i < numOfArrays; i++) {
+          if (p.length < 3) {
+            brak;
+          }
+
+          let nalutype = p[0];
+          let n = p[1] << 8 | p[2]; // Logger.debug(nalutype, n);
+
+          p = p.slice(3);
+
+          for (let j = 0; j < n; j++) {
+            if (p.length < 2) {
+              break;
+            }
+
+            let k = p[0] << 8 | p[1]; // Logger.debug('k', k);
+
+            if (p.length < 2 + k) {
+              break;
+            }
+
+            p = p.slice(2);
+
+            if (nalutype == 33) {
+              //SPS
+              let sps = new Uint8Array(k);
+              sps.set(p.slice(0, k), 0); // Logger.debug(sps, sps.length);
+
+              hevc.psps = HEVCParseSPS(sps, hevc);
+              info.profile = hevc.general_profile_idc;
+              info.level = hevc.general_level_idc / 30.0;
+              info.width = hevc.psps.pic_width_in_luma_samples - (hevc.psps.conf_win_left_offset + hevc.psps.conf_win_right_offset);
+              info.height = hevc.psps.pic_height_in_luma_samples - (hevc.psps.conf_win_top_offset + hevc.psps.conf_win_bottom_offset);
+            }
+
+            p = p.slice(k);
+          }
+        }
+      } while (0);
+
+      return info;
+    }
+
+    function readAVCSpecificConfig(avcSequenceHeader) {
+      let codec_id = avcSequenceHeader[0] & 0x0f;
+
+      if (codec_id == 7) {
+        return readH264SpecificConfig(avcSequenceHeader);
+      } else if (codec_id == 12) {
+        return readHEVCSpecificConfig(avcSequenceHeader);
+      }
+    }
+
+    class AVPacket {
+      payload;
+      avtype;
+      timestamp;
+      nals;
+      iskeyframe;
+    }
+
+    class VideoInfo {
+      vtype;
+      width;
+      height;
+    }
+
+    class AudioInfo {
+      atype;
+      sample;
+      channels;
+      depth;
+      profile;
+    }
+
+    const AVType = {
+      Video: 0x1,
+      Audio: 0x2
+    };
+    const VideoType = {
+      H264: 0x1,
+      H265: 0x2
+    };
+    const AudioType = {
+      PCM: 0x1,
+      PCMA: 0x2,
+      PCMU: 0x4,
+      AAC: 0x8
+    };
+
+    const FLV_MEDIA_TYPE = {
+      Audio: 8,
+      Video: 9,
+      Script: 18
+    };
+    const CodecID = {
+      AVC: 7,
+      //h264
+      HEVC: 12 //h265
+
+    };
+    const FrameType = {
+      KeyFrame: 1,
+      InterFrame: 2
+    };
+    const AVCPacketType = {
+      AVCSequenceHeader: 0,
+      AVCNalu: 1
+    };
+    const SoundFormat = {
+      G711A: 7,
+      G711U: 8,
+      AAC: 10
+    };
+    const AACPackettype = {
+      AACSequenceHeader: 0,
+      AACRaw: 1
+    };
+    const FLV_Parse_State = {
+      Init: 0,
+      TagCommerHeader: 1,
+      TagPayload: 2
+    };
+
+    class FLVDemux extends EventEmitter {
+      _buffer = undefined;
+      _needlen = 0;
+      _state = 0;
+      _tagtype = 0;
+      _dts = 0;
+      _pts = 0;
+      _videoinfo;
+      _audioinfo;
+
+      constructor(avplayer) {
+        super();
+        this._avplayer = avplayer;
+        this._videoinfo = new VideoInfo();
+        this._audioinfo = new AudioInfo();
+        this._state = FLV_Parse_State.Init;
+        this._needlen = 9;
+      }
+
+      dispatch(data) {
+        let remain = data;
+
+        if (this._buffer) {
+          let newbuffer = new Uint8Array(this._buffer.length + data.length);
+          newbuffer.set(this._buffer, 0);
+          newbuffer.set(data, this._buffer.length);
+          remain = newbuffer;
+          this._buffer = undefined;
+        }
+
+        const tmp = new ArrayBuffer(4);
+        const dv = new DataView(tmp);
+
+        while (true) {
+          if (remain.length < this._needlen) {
+            break;
+          }
+
+          if (this._state === FLV_Parse_State.Init) {
+            remain.slice(0, this._needlen);
+            remain = remain.slice(this._needlen);
+            this._needlen = 15;
+            this._state = FLV_Parse_State.TagCommerHeader;
+          } else if (this._state === FLV_Parse_State.TagCommerHeader) {
+            this._tagtype = remain[4] & 0x1F; // 5bit代表类型,8:audio 9:video 18:script other:其他
+
+            dv.setUint8(0, remain[7]);
+            dv.setUint8(1, remain[6]);
+            dv.setUint8(2, remain[5]);
+            dv.setUint8(3, 0);
+            let payloadlen = dv.getUint32(0, true); //Tag 中除通用头外的长度，即 Header + Data 字段的长度 (等于 Tag 总长度 – 11)
+
+            dv.setUint8(0, remain[10]);
+            dv.setUint8(1, remain[9]);
+            dv.setUint8(2, remain[8]);
+            dv.setUint8(3, remain[11]);
+            this._dts = dv.getUint32(0, true);
+            remain.slice(0, this._needlen);
+            remain = remain.slice(this._needlen);
+            this._needlen = payloadlen;
+            this._state = FLV_Parse_State.TagPayload;
+          } else {
+            if (this._tagtype === FLV_MEDIA_TYPE.Video) {
+              let frametype = remain[0] >> 4 & 0x0F;
+              let codecid = remain[0] & 0x0F;
+
+              if (codecid === CodecID.AVC || codecid === CodecID.HEVC) {
+                let avcpackettype = remain[1];
+                dv.setUint8(0, remain[4]);
+                dv.setUint8(1, remain[3]);
+                dv.setUint8(2, remain[2]);
+                dv.setUint8(3, 0);
+                let compositiontime = dv.getUint32(0, true);
+                this._pts = this._dts + compositiontime;
+
+                if (frametype === FrameType.KeyFrame) {
+                  if (avcpackettype === AVCPacketType.AVCSequenceHeader) {
+                    let obj = ParseSPSAndPPS(remain.slice(0, this._needlen));
+                    this._sps = obj.sps;
+                    this._pps = obj.pps;
+
+                    this._avplayer._logger.info('FlvDemux', `parse sps:${this._sps[0] & 0x1F} pps:${this._pps[0] & 0x1F}`); //avcseq
+
+
+                    let info = readAVCSpecificConfig(remain.slice(0, this._needlen));
+                    this._videoinfo.vtype = codecid === CodecID.AVC ? VideoType.H264 : VideoType.H265;
+                    this._videoinfo.width = info.width;
+                    this._videoinfo.height = info.height;
+                    this.emit('videoinfo', this._videoinfo);
+                  } else if (avcpackettype === AVCPacketType.AVCNalu) {
+                    //I Frame
+                    let vframe = remain.slice(5, this._needlen);
+                    let packet = new AVPacket();
+                    packet.payload = vframe;
+                    packet.iskeyframe = true;
+                    packet.timestamp = this._pts;
+                    packet.avtype = AVType.Video;
+                    packet.nals = SplitBufferToNals(vframe);
+                    this.emit('videodata', packet);
+                  } else ;
+                } else if (frametype === FrameType.InterFrame) {
+                  if (avcpackettype === AVCPacketType.AVCNalu) {
+                    //P Frame
+                    let vframe = remain.slice(5, this._needlen);
+                    let packet = new AVPacket();
+                    packet.payload = vframe;
+                    packet.iskeyframe = false;
+                    packet.timestamp = this._pts;
+                    packet.avtype = AVType.Video;
+                    packet.nals = SplitBufferToNals(vframe);
+                    this.emit('videodata', packet);
+                  }
+                } else ;
+              }
+            } else if (this._tagtype === FLV_MEDIA_TYPE.Audio) {
+              let soundformat = remain[0] >> 4 & 0x0F;
+              remain[0] >> 2 & 0x02;
+              let soundsize = remain[0] >> 1 & 0x01;
+              remain[0] & 0x0F;
+
+              if (soundformat === SoundFormat.AAC) {
+                let aacpackettype = remain[1];
+
+                if (aacpackettype === AACPackettype.AACSequenceHeader) {
+                  let aacinfo = readAACSpecificConfig(remain.slice(0, this._needlen));
+                  this._audioinfo.atype = AudioType.AAC;
+                  this._audioinfo.profile = aacinfo.object_type;
+                  this._audioinfo.sample = aacinfo.sample_rate;
+                  this._audioinfo.channels = aacinfo.chan_config;
+                  this._audioinfo.depth = soundsize ? 16 : 8;
+                  this.emit('audioinfo', this._audioinfo);
+                } else {
+                  let aacraw = remain.slice(2, this._needlen);
+                  let packet = new AVPacket();
+                  packet.payload = aacraw;
+                  packet.iskeyframe = false;
+                  packet.timestamp = this._dts;
+                  packet.avtype = AVType.Audio;
+                  this.emit('audiodata', packet);
+                }
+              } else {
+                if (!this._pcminfosend) {
+                  this._audioinfo.atype = soundformat === SoundFormat.G711A ? AudioType.PCMA : AudioType.PCMU;
+                  this._audioinfo.profile = 0;
+                  this._audioinfo.sample = 8000;
+                  this._audioinfo.channels = 1;
+                  this._audioinfo.depth = 16;
+                  this.emit('audioinfo', this._audioinfo);
+                  this._pcminfosend = true;
+                }
+
+                let audioraw = remain.slice(1, this._needlen);
+                let packet = new AVPacket();
+                packet.payload = audioraw;
+                packet.iskeyframe = false;
+                packet.timestamp = this._dts;
+                packet.avtype = AVType.Audio;
+                this.emit('audiodata', packet);
+              }
+            } else if (this._tagtype === FLV_MEDIA_TYPE.Script) ; else ;
+
+            remain = remain.slice(this._needlen);
+            this._needlen = 15;
+            this._state = FLV_Parse_State.TagCommerHeader;
+          }
+        }
+
+        this._buffer = remain;
+      }
+
+      destroy() {
+        this.off();
+      }
+
+    }
+
+    function SplitBufferToNals(buffer) {
+      let nals = [];
+      let offset = 0;
+      const tmp = new ArrayBuffer(4);
+      const dv = new DataView(tmp);
+
+      while (offset < buffer.length) {
+        dv.setUint8(0, buffer[offset + 3]);
+        dv.setUint8(1, buffer[offset + 2]);
+        dv.setUint8(2, buffer[offset + 1]);
+        dv.setUint8(3, buffer[offset]);
+        let nallen = dv.getUint32(0, true); //buf.writeUInt32BE(1, offset);
+
+        nals.push(buffer.slice(offset, offset + nallen + 4));
+        offset += 4;
+        buffer[offset] & 0x1F; // console.log(`nal len ${nallen} type:${naltype}`)
+
+        offset += nallen;
+      }
+
+      if (offset != buffer.length) {
+        console.error(`parse nal error, offset:${offset} buflen:${buffer.length}`);
+      }
+
+      return nals;
+    }
+
+    function ParseSPSAndPPS(videData) {
+      let avcSequenceHeader = new Uint8Array(videData.length - 5);
+      avcSequenceHeader.set(videData.slice(5));
+      const tmp = new ArrayBuffer(2);
+      const dv = new DataView(tmp);
+      let offset = 5;
+      avcSequenceHeader[offset] & 0x1F;
+      offset += 1;
+      dv.setInt8(0, avcSequenceHeader[offset + 1]);
+      dv.setInt8(1, avcSequenceHeader[offset]);
+      let spslen = dv.getUint16(0, true);
+      offset += 2;
+      let sps = avcSequenceHeader.slice(offset, offset + spslen);
+      offset += spslen;
+      avcSequenceHeader[offset];
+      offset += 1;
+      dv.setInt8(0, avcSequenceHeader[offset + 1]);
+      dv.setInt8(1, avcSequenceHeader[offset]);
+      let ppslen = dv.getUint16(0, true);
+      offset += 2;
+      let pps = avcSequenceHeader.slice(offset, offset + ppslen);
+      return {
+        sps,
+        pps
+      };
+    }
+
+    class FetchStream extends EventEmitter {
+      _avplayer = undefined;
+      _abort = undefined;
+
+      constructor(avplayer) {
+        super();
+        this._avplayer = avplayer;
+        this._abort = new AbortController();
+      }
+
+      start() {
+        fetch(this._avplayer._options.url, {
+          signal: this._abort.signal
+        }).then(res => {
+          const reader = res.body.getReader();
+
+          let fetchNext = async () => {
+            let {
+              done,
+              value
+            } = await reader.read();
+
+            if (done) ; else {
+              this._avplayer._demux.dispatch(value);
+
+              fetchNext();
+            }
+          };
+
+          fetchNext();
+        }).catch(e => {
+          this.stop();
+        });
+      }
+
+      stop() {
+        if (this._abort) {
+          this._abort.abort();
+
+          this._abort = undefined;
+        }
+      }
+
+      destroy() {
+        this.stop();
+        this.off();
       }
 
     }
@@ -746,11 +1674,81 @@ void main(void) {
     class AVPlayer {
       _options = undefined;
       _render = undefined;
+      _logger = undefined;
+      _demux = undefined;
+      _stream = undefined; //统计
+
+      _vframerate = 0;
+      _vbitrate = 0;
+      _aframerate = 0;
+      _abitrate = 0;
+      _statsec = 2;
+      _stattimer = undefined;
 
       constructor(options) {
+        this._logger = new Logger();
+
+        this._logger.setLogEnable(true);
+
         this._options = Object.assign({}, DEFAULT_PLAYER_OPTIONS, options);
-        this.$container = this._options.container;
+        this._container = options.container;
+
+        this._logger.info('player', `now play ${this._options.url}`);
+
         this._render = new CanvasRender(this);
+        this._demux = new FLVDemux(this);
+        this._stream = new FetchStream(this);
+        this.registerEvents();
+
+        this._stream.start();
+
+        this.startStatisc();
+      }
+
+      startStatisc() {
+        this._stattimer = setInterval(() => {
+          this._logger.info('STAT', `------ STAT ---------
+            video framerate:${this._vframerate / this._statsec} bitrate:${this._vbitrate * 8 / this._statsec}
+            audio framerate:${this._aframerate / this._statsec} bitrate:${this._abitrate * 8 / this._statsec}
+            `);
+
+          this._vframerate = 0;
+          this._vbitrate = 0;
+          this._aframerate = 0;
+          this._abitrate = 0;
+        }, this._statsec * 1000);
+      }
+
+      stopStatic() {
+        if (this._stattimer) {
+          clearInterval(this._stattimer);
+          this._stattimer = undefined;
+        }
+      }
+
+      registerEvents() {
+        this._demux.on('videoinfo', videoinfo => {
+          this._logger.info('player', `videoinfo vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
+        });
+
+        this._demux.on('audioinfo', audioinfo => {
+          this._logger.info('player', `audioinfo atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
+        });
+
+        this._demux.on('videodata', packet => {
+          // this._logger.info('player', `recv VideoData ${packet.payload.length} keyframe:${packet.iskeyframe} nals:${packet.nals.length} pts:${packet.timestamp}`);
+          // for (let nal of packet.nals) {
+          //     let naltype = nal[4]&0x1F;
+          //     this._logger.info('player', `Parse Nal: ${naltype}`)
+          // }
+          this._vframerate++;
+          this._vbitrate += packet.payload.length;
+        });
+
+        this._demux.on('audiodata', packet => {
+          this._aframerate++;
+          this._abitrate += packet.payload.length; //  this._logger.info('player', `recv AudioData ${packet.payload.length} pts:${packet.timestamp}`);
+        });
       }
 
       updateTexture(rgbabuf, width, height) {

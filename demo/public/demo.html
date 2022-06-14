@@ -48,14 +48,15 @@ function main() {
     let $container = document.getElementById('container');
 
     let options = {
-            container: $container
+            container: $container,
+            url:'http://192.168.6.18:8080/live/a123456.flv'
     };
     let p = new AVPlayer(options);
 
 
 
 
-    let img = loadImage('2.png',(rgba, width, height) => {
+    let img = loadImage('1.png',(rgba, width, height) => {
 
 
         p.updateTexture(rgba, width, height);
