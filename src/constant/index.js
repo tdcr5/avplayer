@@ -44,4 +44,30 @@ const AAC_SAMPLE_RATE = [
     7350, 0, 0, 0
   ];
 
-export {AVType, VideoType, AudioType, PixelType, ADTS_HEADER_SIZE, AAC_SAMPLE_RATE, AACProfile};
+
+
+
+const WORKER_SEND_TYPE = {
+    init: 'init',
+    setVideoCodec: 'setVideoCodec',
+    decodeVideo: 'decodeVideo',
+    setAudioCodec: 'setAudioCodec',
+    decodeAudio: 'decodeAudio',
+    close: 'close'
+}
+
+
+const WORKER_EVENT_TYPE = {
+    created:'created',
+    inited:'inited',
+    videoInfo: 'videoInfo',
+    yuvData: 'yuvData',
+    audioInfo: 'audioInfo',
+    pcmData: 'pcmData'
+}
+
+
+
+
+
+export {AVType, VideoType, AudioType, PixelType, ADTS_HEADER_SIZE, AAC_SAMPLE_RATE, AACProfile, WORKER_SEND_TYPE, WORKER_EVENT_TYPE};

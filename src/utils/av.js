@@ -15,6 +15,7 @@ class VideoInfo {
     vtype;
     width;
     height;
+    extradata;
 }
 
 
@@ -25,6 +26,7 @@ class AudioInfo {
     channels;
     depth;
     profile;
+    extradata;
    
 }
 

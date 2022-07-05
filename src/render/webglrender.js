@@ -3,6 +3,8 @@ import RectRender from "./rectrender.js";
 import BaseRender from "./baserender.js";
 import CylinderRender from "./cylinderrender.js";
 import HemisphereRender from "./hemisphererender.js"
+import RectMaskRender from "./rectmaskrender.js";
+import RectGreenRender from "./rectgreenrender.js";
 
 function createContextGL($canvas) {
     let gl = null;
@@ -41,14 +43,18 @@ class WebGLRender {
 
         this._gl = createContextGL(canvas);
 
-        this._render = new CubeRender(this._gl, canvas.width, canvas.height);
+        this._render = new RectMaskRender(this._gl, canvas.width, canvas.height);
 
     }
 
-    updateTexture(rgbabuf, width, height) {
+    
+    updateTexture(pixeltype, pixelbuf, width, height) {
 
-        this._render.updateTexture(rgbabuf, width, height);
+        this._render.updateTexture(pixeltype, pixelbuf, width, height);
     }
+
+
+
 
 
 }

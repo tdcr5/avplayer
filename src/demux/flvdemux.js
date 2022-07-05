@@ -4,6 +4,7 @@ import {AVPacket, VideoInfo, AudioInfo} from '../utils/av.js';
 import {AVType, VideoType, AudioType, PixelType, ADTS_HEADER_SIZE, AAC_SAMPLE_RATE, AACProfile} from '../constant'
 
 
+
 const FLV_MEDIA_TYPE = {
     Audio: 8,
     Video: 9,
@@ -157,7 +158,7 @@ class FLVDemux extends EventEmitter {
                 dv.setUint8(2, remain[8]);
                 dv.setUint8(3, remain[11]);
 
-                this._dts = dv.getUint32(0, true);
+                this._dts = dv.getInt32(0, true);
 
                 let tagcommonheader = remain.slice(0, this._needlen);
                 remain = remain.slice(this._needlen);
@@ -181,13 +182,12 @@ class FLVDemux extends EventEmitter {
                         dv.setUint8(2, remain[2]);
                         dv.setUint8(3, 0);
 
-                        let compositiontime = dv.getUint32(0, true);
+                        let compositiontime = dv.getInt32(0, true);
                         this._pts = this._dts + compositiontime;
 
                         if (frametype === FrameType.KeyFrame) {
 
                             if (avcpackettype === AVCPacketType.AVCSequenceHeader) {
-
 
                                  let obj = ParseSPSAndPPS(remain.slice(0, this._needlen));
 
@@ -202,6 +202,7 @@ class FLVDemux extends EventEmitter {
                                 this._videoinfo.vtype = codecid === CodecID.AVC ? VideoType.H264 : VideoType.H265;
                                 this._videoinfo.width = info.width;
                                 this._videoinfo.height = info.height
+                                this._videoinfo.extradata = remain.slice(5, this._needlen);
             
                                 this.emit('videoinfo', this._videoinfo);
 
@@ -233,11 +234,11 @@ class FLVDemux extends EventEmitter {
 
                                 
                                 let packet = new AVPacket();
-                                packet.payload = vframe;
+                                packet.payload = convertAVCCtoAnnexB(vframe);
                                 packet.iskeyframe = false;
                                 packet.timestamp = this._pts;
                                 packet.avtype = AVType.Video;
-                                packet.nals = SplitBufferToNals(vframe);
+                                // packet.nals = SplitBufferToNals(vframe);
 
                                 this.emit('videodata', packet);
 
@@ -275,6 +276,7 @@ class FLVDemux extends EventEmitter {
                             this._audioinfo.sample = aacinfo.sample_rate;
                             this._audioinfo.channels = aacinfo.chan_config;
                             this._audioinfo.depth = soundsize ? 16 : 8;
+                            this._audioinfo.extradata = remain.slice(2, this._needlen);
 
                             this.emit('audioinfo', this._audioinfo);
 
@@ -300,6 +302,7 @@ class FLVDemux extends EventEmitter {
                             this._audioinfo.sample = 8000;
                             this._audioinfo.channels = 1;
                             this._audioinfo.depth = 16;
+                            this._audioinfo.extradata = new Uint8Array(0);
 
                             this.emit('audioinfo', this._audioinfo);
 
@@ -346,6 +349,47 @@ class FLVDemux extends EventEmitter {
 
 
 }
+
+function convertAVCCtoAnnexB(buffer) {
+
+    let offset = 0;
+
+    const tmp = new ArrayBuffer(4);
+    const dv = new DataView(tmp);
+
+    while(offset < buffer.length) {
+
+        dv.setUint8(0, buffer[offset+3]);
+        dv.setUint8(1, buffer[offset+2]);
+        dv.setUint8(2, buffer[offset+1]);
+        dv.setUint8(3, buffer[offset]);
+        
+        let nallen = dv.getUint32(0, true);
+        
+        buffer[offset] = 0;
+        buffer[offset+1] = 0;
+        buffer[offset+2] = 0;
+        buffer[offset+3] = 1;
+
+        offset += 4;
+        let naltype = buffer[offset]&0x1F;
+
+       // console.log(`nal len ${nallen} type:${naltype}`)
+        offset += nallen;
+    }
+
+    if (offset != buffer.length) {
+
+        console.error(`parse nal error, offset:${offset} buflen:${buffer.length}`)
+    } else {
+      //  console.log(`parse nal suc, offset:${offset} buflen:${buffer.length}`)
+
+    }
+
+
+    return buffer;
+}
+
 
 
 function SplitBufferToNals(buffer) {

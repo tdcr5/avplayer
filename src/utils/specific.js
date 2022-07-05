@@ -492,6 +492,7 @@ function getAVCProfileName(info) {
 }
 
 
+
 export {
   AUDIO_SOUND_RATE,
   AUDIO_CODEC_NAME,
@@ -499,5 +500,5 @@ export {
   readAACSpecificConfig,
   getAACProfileName,
   readAVCSpecificConfig,
-  getAVCProfileName,
+  getAVCProfileName
 };

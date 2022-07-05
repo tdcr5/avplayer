@@ -8,12 +8,22 @@
     <script src="./avplayer.js"></script>
 </head>
 <body>
-    <div id="container"></div>
+    <div>
+        <button id="unmute" type="button">打开声音</button>
+    </div>
+    <div id="container" style="position: relative;">
+        <video id="video" src="./flower.mp4" with=1080 height=960 autoplay=true loop  playsinline=true muted=true></video>
+    </div>
+
+
 </body>
 </html>
 
 <script type="module">
 "use strict";
+
+
+
 
 function loadImage(url, callback) {
 
@@ -49,19 +59,31 @@ function main() {
 
     let options = {
             container: $container,
-            url:'http://192.168.6.18:8080/live/a123456.flv'
+            url:'http://192.168.6.18:8080/live/nihao-12345.flv',
+            // url:'http://192.168.6.18:8080/live/a123456.flv',
+            delay:100
     };
     let p = new AVPlayer(options);
-
-
-
 
     let img = loadImage('1.png',(rgba, width, height) => {
 
 
-        p.updateTexture(rgba, width, height);
+ //       p.updateTexture(rgba, width, height);
 
-    })
+    });
+
+
+    document.getElementById("unmute").onclick = () => {
+
+        console.log(`btn click`);
+        p.unMute();
+
+        document.getElementById("video").play();
+
+    };
+
+
+
 
 
 }
@@ -71,4 +93,9 @@ main();
 
 
 
+</script>
+<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+<script>
+  // VConsole 默认会挂载到 `window.VConsole` 上
+  var vConsole = new window.VConsole();
 </script>

@@ -13,12 +13,12 @@ class CanvasRender {
         this._avplayer = avplayer;
         
         let canvasElement = document.createElement("canvas");
-        canvasElement.style.position = "relative";
-        canvasElement.style.top = '50px';
-        canvasElement.style.left = '50px';
+        canvasElement.style.position = "absolute";
+        canvasElement.style.top = '0px';
+        canvasElement.style.left = '0px';
 
-        canvasElement.width = 640;
-        canvasElement.height = 640;
+        canvasElement.width = 1080;
+        canvasElement.height = 960;
 
         this._videoElement = canvasElement;
         avplayer._container.appendChild(this._videoElement);
@@ -27,9 +27,9 @@ class CanvasRender {
 
     }
 
-    updateTexture(rgbabuf, width, height) {
+    updateTexture(pixeltype, pixelbuf, width, height) {
 
-        this._webglrender.updateTexture(rgbabuf, width, height);
+        this._webglrender.updateTexture(pixeltype, pixelbuf, width, height);
     }
 
 
