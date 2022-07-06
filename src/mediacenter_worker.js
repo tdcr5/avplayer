@@ -2,6 +2,7 @@ import Module from './decoder/decoder'
 import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE} from './constant'
 import { AVPacket } from './utils/av';
 import { AVType } from './constant';
+import SpliteBuffer from './utils/splitebuffer';
 
 
 const JitterBufferStatus = {
@@ -26,17 +27,21 @@ class MediaCenterInternal {
 
     _sampleRate = 0;
     _channels = 0;
-    _samplesPerPacket = 0;
 
     _options = undefined;
 
     _gop = [];
+
     _status = JitterBufferStatus.notstart;
     _firstts = 0;
     _firstpacketts = 0;
 
     _timer = undefined;
     _statistic = undefined;
+
+
+    _useSpliteBuffer = false;
+    _spliteBuffer = undefined;
 
 
     constructor() {
@@ -53,7 +58,7 @@ class MediaCenterInternal {
 
       this._statistic = setInterval(() => {
 
-        console.log(`jitter buffer count ${this._gop.length}`);
+        console.log(`----------------- jitter buffer count ${this._gop.length}`);
         
       }, 1000);
     }
@@ -100,8 +105,11 @@ class MediaCenterInternal {
             if (this._gop[this._gop.length-1].timestamp - this._gop[0].timestamp > this._options.delay) {
 
                 this._status = JitterBufferStatus.decoding;
+
+                this.tryDropFrames();
+
                 this._firstpacketts = this._gop[0].timestamp;
-                this._firstts = this.caculateFirstTS();
+                this._firstts = new Date().getTime();
 
                 console.log(`gop buffer ok, delay ${this._options.delay}, last[${this._gop[this._gop.length-1].timestamp}] first[${ this._gop[0].timestamp}] factfirst[${this._firstts}]`);
 
@@ -141,53 +149,33 @@ class MediaCenterInternal {
 
     }
 
-
-    caculateFirstTS() {
-
-        let now = new Date().getTime();
+    tryDropFrames() {
 
         if (this._options.playmode === 'playback') {
 
-            return now;
+            return;
         }
 
-        if (this._gop.length < 1) {
+        let index = -1;
+        for(let i = 0; i < this._gop; i++) {
 
-            return now 
-        }
+            let packet = this._gop[i];
 
-        let lastpackts = this._gop[this._gop.length-1];
+            if (packet.avtype === AVType.Video && packet.iskeyframe) {
 
-        let bf = false;
-        let i = this._gop.length - 2
-        for(; i >= 0; i--) {
-
-            // console.log(`buffer check, lastpacketts ${lastpackts.timestamp} i ${i} ts ${this._gop[i].timestamp} delay ${this._options.delay} `);
-
-            if(lastpackts.timestamp - this._gop[i].timestamp >= this._options.delay) {
-                bf = true;
-                break;
+                index = i;
             }
-
         }
 
-        // console.log(`buffer check foud ${bf}`)
+        if (index > 0) {
 
-        if (bf) {
-
-            let diff = this._gop[i].timestamp - this._gop[0].timestamp;
-
-            console.log(`buffering too much, gop cnt ${this._gop.length}, so just firsts ${now - diff}, now ${now}, diff ${diff}`)
-
-            return now - diff;
-
+            console.log(`tryDropFrames, find keyframe ${index} in gop, drop ${index} packet`);
+            this._gop = this._gop.slice(index);
+            return;
         }
 
-        console.log(`buffering normal, gop cnt ${this._gop.length}, so firsts ${now}`)
 
-        return now
-
-
+        console.log(`tryDropFrames, find keyframe ${index} in gop, drop no packet`);
     }
 
     decodePacket(avpacket) {
@@ -262,21 +250,15 @@ class MediaCenterInternal {
         postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, timestamp}, [data.buffer]);
     }
 
-    audioInfo(atype, sampleRate, channels, samplesPerPacket) {
+    audioInfo(atype, sampleRate, channels) {
 
         this._sampleRate = sampleRate;
         this._channels = channels;
-        this._samplesPerPacket = samplesPerPacket;
 
-        postMessage({cmd: WORKER_EVENT_TYPE.audioInfo, atype, sampleRate, channels, samplesPerPacket});
+        postMessage({cmd: WORKER_EVENT_TYPE.audioInfo, atype, sampleRate, channels, samplesPerPacket:this._options.samplesPerPacket});
     }
 
     pcmData(pcmDataArray, samples, timestamp) {
-
-        if (samples !== this._samplesPerPacket) {
-
-            console.warn(`pcm data samplesPerChannel ${samples} not equal samplesPerPacket ${this._samplesPerPacket}`)
-        }
 
         let datas = [];
 
@@ -287,19 +269,34 @@ class MediaCenterInternal {
            // console.log(`worker thread pcm data[${i}] length ${datas[i].length} samples ${samples}`);
         }
 
-        postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas, timestamp}, datas.map(x => x.buffer));
+
+        if (!this._useSpliteBuffer) {
+
+            if(samples === this._options.samplesPerPacket) {
+
+                postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas, timestamp}, datas.map(x => x.buffer));
+                return;
+            }
+
+            this._spliteBuffer = new SpliteBuffer(this._sampleRate, this._channels, this._options.samplesPerPacket);
+            this._useSpliteBuffer = true;
+        } 
+
+        this._spliteBuffer.addBuffer(datas, timestamp);
+
+        this._spliteBuffer.splite((buffers, ts) => {
+
+            postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas:buffers, timestamp:ts}, buffers.map(x => x.buffer));
+        });
 
     }
 
 
     destory() {
 
-
         clearInterval(this._timer);
-
         clearInterval(this._statistic);
         
-
     }
     
 

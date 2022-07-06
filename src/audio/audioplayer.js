@@ -28,6 +28,12 @@ class AudioPlayer extends EventEmitter {
         this._init = false;
 
         this._player._logger.info('AudioPlayer', 'created');
+
+        this._statistic = setInterval(() => {
+
+            console.log(`----------- audio buffer count ${this._audioBuffer.length}`);
+            
+          }, 1000);
     }
 
     setAudioInfo(atype, samplerate, channels, samplesPerPacket) {
@@ -56,6 +62,16 @@ class AudioPlayer extends EventEmitter {
           //  this._player._logger.info('AudioPlayer', `onaudioprocess callback ${outputBuffer.sampleRate}`);
 
             if (this._audioBuffer.length === 0) {
+
+                this._player._logger.info('AudioPlayer', `------------ audiobuffer is empty`);
+
+                for (let i = 0; i < this._channels; i++) {
+
+                    let nowBuffering = outputBuffer.getChannelData(i);
+                    for (let i = 0; i < this._samplesPerPacket; i++) {
+                        nowBuffering[i] = 0;
+                    }
+                }
                 return;
             }
 
@@ -68,6 +84,12 @@ class AudioPlayer extends EventEmitter {
                 for (let i = 0; i < this._samplesPerPacket; i++) {
                     nowBuffering[i] = b[i] || 0;
                 }
+            }
+
+            if (this._audioBuffer.length > 3) {
+
+                this._player._logger.info('AudioPlayer', `------------ audio buffer too much audio, drop ${this._audioBuffer.length - 3} buffer`);
+                this._audioBuffer = this._audioBuffer.slice(this._audioBuffer.length - 3);
             }
       
         }

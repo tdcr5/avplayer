@@ -425,7 +425,7 @@ void  AudioDecoder::frameReady(u32 timestamp)  {
 
     if (!mNotifyAudioParam) {
 
-        mJsObject.call<void>("audioInfo", mAVType, mFrame->sample_rate, mFrame->channels, nb_samples);
+        mJsObject.call<void>("audioInfo", mAVType, mFrame->sample_rate, mFrame->channels);
         mNotifyAudioParam = true;
     }
 

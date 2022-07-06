@@ -115,8 +115,8 @@ class CubeRender extends BaseRender {
       let texture = this._gl.createTexture();
       this._gl.bindTexture(this._gl.TEXTURE_2D, texture);
   
-      this._gl.texParameteri(this._gl.TEXTURE_2D, this._gl.TEXTURE_MIN_FILTER, this._gl.NEAREST);
-      this._gl.texParameteri(this._gl.TEXTURE_2D, this._gl.TEXTURE_MAG_FILTER, this._gl.NEAREST);
+      this._gl.texParameteri(this._gl.TEXTURE_2D, this._gl.TEXTURE_MAG_FILTER, this._gl.LINEAR);
+      this._gl.texParameteri(this._gl.TEXTURE_2D, this._gl.TEXTURE_MIN_FILTER, this._gl.LINEAR);
       this._gl.texParameteri(this._gl.TEXTURE_2D, this._gl.TEXTURE_WRAP_S, this._gl.CLAMP_TO_EDGE);
       this._gl.texParameteri(this._gl.TEXTURE_2D, this._gl.TEXTURE_WRAP_T, this._gl.CLAMP_TO_EDGE);
 
@@ -174,7 +174,7 @@ class CubeRender extends BaseRender {
         let gl = this._gl;
 
         gl.viewport(0 , 0, this._width, this._height);
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
+        gl.clearColor(0.0, 0.0, 0.0, 0.0);  // Clear to black, fully opaque
         gl.clearDepth(1.0);                 // Clear everything
         gl.enable(gl.DEPTH_TEST);           // Enable depth testing
         gl.depthFunc(gl.LEQUAL);            // Near things obscure far things

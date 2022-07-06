@@ -38,12 +38,48 @@ class WebGLRender {
     _gl;
 
     _render;
+    _avplayer;
 
-    constructor(canvas) {
+    constructor(avplayer, canvas) {
+
+        this._avplayer = avplayer;
 
         this._gl = createContextGL(canvas);
 
-        this._render = new RectMaskRender(this._gl, canvas.width, canvas.height);
+        switch(avplayer._options.render) {
+
+            case "normal": {
+
+                this._render = new RectRender(this._gl, canvas.width, canvas.height);
+                break;
+            }
+
+            case "green": {
+
+                this._render = new RectGreenRender(this._gl, canvas.width, canvas.height);
+                break;
+            }
+
+            case "mask": {
+
+                this._render = new RectMaskRender(this._gl, canvas.width, canvas.height);
+                break;
+            }
+
+            case "cube": {
+
+                this._render = new CubeRender(this._gl, canvas.width, canvas.height);
+                break;
+            }
+
+            default: {
+                this._render = new RectRender(this._gl, canvas.width, canvas.height);
+                break;
+            }
+
+        }
+
+        
 
     }
 

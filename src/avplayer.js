@@ -10,10 +10,18 @@ const DEFAULT_PLAYER_OPTIONS = {
 
     url:'',                 //播放地址
     container:'',           //外部容器，用于放置渲染画面
+
+
     playmode:'live',        //live 或者 playback
+
+    render:'normal', // normal:正常, green:绿幕, mask:掩码, cube:方块
+    width:480,
+    height:480,
+
+
     delay:100,              //缓冲时长
     decoder:'decoder.js',    //work线程的js文件
-
+    samplesPerPacket:1024    //供audioplayer播放的音频采样数,必须是2的幂次[256 - 1024]
 }
 
 class AVPlayer {
@@ -104,7 +112,7 @@ class AVPlayer {
 
         this._demux.on('videoinfo', (videoinfo) => {
 
-            this._logger.info('player', `videoinfo vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
+            this._logger.info('player', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
 
             this._mediacenter.setVideoCodec(videoinfo.vtype, videoinfo.extradata);
 
@@ -112,14 +120,14 @@ class AVPlayer {
 
         this._demux.on('audioinfo', (audioinfo) => {
 
-            this._logger.info('player', `audioinfo atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
+            this._logger.info('player', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
             this._mediacenter.setAudioCodec(audioinfo.atype, audioinfo.extradata);
         })
 
         this._demux.on('videodata', (packet) => {
 
-           //  this._logger.info('player', `recv VideoData ${packet.payload.length} keyframe:${packet.iskeyframe} pts:${packet.timestamp}`);
+         //    this._logger.info('player', `recv VideoData ${packet.payload.length} keyframe:${packet.iskeyframe} pts:${packet.timestamp}`);
             // for (let nal of packet.nals) {
 
             //     let naltype = nal[4]&0x1F;
@@ -153,7 +161,7 @@ class AVPlayer {
 
         this._mediacenter.on('videoinfo', (vtype, width, height) => {
 
-            this._logger.info('player', `videoinfo vtype ${vtype} width ${width} height ${height}`);
+            this._logger.info('player', `mediacenter video info vtype ${vtype} width ${width} height ${height}`);
         })
 
         this._mediacenter.on('yuvdata', (yuvpacket) => {
@@ -169,7 +177,7 @@ class AVPlayer {
 
         this._mediacenter.on('audioinfo', (atype, sampleRate, channels, samplesPerPacket) => {
 
-            this._logger.info('player', `audioninfo atype ${atype} sampleRate ${sampleRate} channels ${channels}  samplesPerPacket ${samplesPerPacket}`);
+            this._logger.info('player', `mediacenter audio info atype ${atype} sampleRate ${sampleRate} channels ${channels}  samplesPerPacket ${samplesPerPacket}`);
             
             this._audioplayer.setAudioInfo(atype, sampleRate, channels,samplesPerPacket);
             
@@ -202,6 +210,11 @@ class AVPlayer {
     unMute() {
 
         this._audioplayer.unMute();
+    }
+
+    mute() {
+
+        this._audioplayer.mute();
     }
 
 

@@ -12,7 +12,7 @@
         <button id="unmute" type="button">打开声音</button>
     </div>
     <div id="container" style="position: relative;">
-        <video id="video" src="./flower.mp4" with=1080 height=960 autoplay=true loop  playsinline=true muted=true></video>
+        <video id="video" src="./flower.mp4" with=800 height=800 autoplay=true loop  playsinline=true muted=true></video>
     </div>
 
 
@@ -59,9 +59,13 @@ function main() {
 
     let options = {
             container: $container,
-            url:'http://192.168.6.18:8080/live/nihao-12345.flv',
-            // url:'http://192.168.6.18:8080/live/a123456.flv',
-            delay:100
+           url:'http://192.168.6.18:8080/live/nihao-12345.flv',
+            //   url:'http://192.168.6.18:8080/live/a123456.flv',
+            delay:300,
+            width:800,
+            height:800,
+            playmode:'live',
+            render:'mask'
     };
     let p = new AVPlayer(options);
 

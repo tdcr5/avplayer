@@ -5324,7 +5324,7 @@
 	    "i": __embind_register_std_wstring,
 	    "q": __embind_register_void,
 	    "h": __emscripten_date_now,
-	    "f": __emval_call_void_method,
+	    "g": __emval_call_void_method,
 	    "B": __emval_decref,
 	    "e": __emval_get_method_caller,
 	    "a": _abort,
@@ -5336,7 +5336,7 @@
 	    "y": _fd_read,
 	    "r": _fd_seek,
 	    "k": _fd_write,
-	    "g": _setTempRet0
+	    "f": _setTempRet0
 	  };
 	  createWasm();
 
@@ -5384,7 +5384,7 @@
 	    return (Module["dynCall_jiji"] = Module["asm"]["O"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 116364;
+	  Module["_ff_h264_cabac_tables"] = 116332;
 
 	  var calledRun;
 
@@ -5477,6 +5477,92 @@
 	  iskeyframe;
 	}
 
+	class SpliteBuffer {
+	  _sampleRate = 0;
+	  _channels = 0;
+	  _samplesPerPacket = 0;
+	  _samplesList = [];
+	  _curSamples = 0;
+
+	  constructor(sampleRate, channels, samplesPerPacket) {
+	    this._sampleRate = sampleRate;
+	    this._channels = channels;
+	    this._samplesPerPacket = samplesPerPacket;
+	  }
+
+	  addBuffer(buffers, pts) {
+	    this._samplesList.push({
+	      buffers,
+	      pts
+	    });
+
+	    this._curSamples += buffers[0].length;
+	  }
+
+	  spliteOnce(f) {
+	    if (this._curSamples < this._samplesPerPacket) {
+	      return;
+	    }
+
+	    let newbuffers = [];
+	    let pts = undefined;
+
+	    for (let i = 0; i < this._channels; i++) {
+	      newbuffers.push(new Float32Array(this._samplesPerPacket));
+	    }
+
+	    let needSamples = this._samplesPerPacket;
+	    let copySamples = 0;
+
+	    while (true) {
+	      if (needSamples === 0) {
+	        break;
+	      }
+
+	      let first = this._samplesList[0];
+
+	      if (!pts) {
+	        pts = first.pts;
+	      }
+
+	      if (needSamples >= first.buffers[0].length) {
+	        newbuffers[0].set(first.buffers[0], copySamples);
+
+	        if (this._channels > 1) {
+	          newbuffers[1].set(first.buffers[1], copySamples);
+	        }
+
+	        needSamples -= first.buffers[0].length;
+	        copySamples += first.buffers[0].length;
+
+	        this._samplesList.shift();
+	      } else {
+	        newbuffers[0].set(first.buffers[0].slice(0, needSamples), copySamples);
+	        first.buffers[0] = first.buffers[0].slice(needSamples);
+
+	        if (this._channels > 1) {
+	          newbuffers[1].set(first.buffers[1].slice(0, needSamples), copySamples);
+	          first.buffers[1] = first.buffers[1].slice(needSamples);
+	        }
+
+	        first.pts += Math.floor(needSamples * 1000 / this._sampleRate);
+	        copySamples += needSamples;
+	        needSamples = 0;
+	      }
+	    }
+
+	    this._curSamples -= this._samplesPerPacket;
+	    f(newbuffers, pts);
+	  }
+
+	  splite(f) {
+	    while (this._curSamples >= this._samplesPerPacket) {
+	      this.spliteOnce(f);
+	    }
+	  }
+
+	}
+
 	const JitterBufferStatus = {
 	  notstart: 'notstart',
 	  //未开始
@@ -5495,7 +5581,6 @@
 	  _height = 0;
 	  _sampleRate = 0;
 	  _channels = 0;
-	  _samplesPerPacket = 0;
 	  _options = undefined;
 	  _gop = [];
 	  _status = JitterBufferStatus.notstart;
@@ -5503,6 +5588,8 @@
 	  _firstpacketts = 0;
 	  _timer = undefined;
 	  _statistic = undefined;
+	  _useSpliteBuffer = false;
+	  _spliteBuffer = undefined;
 
 	  constructor() {
 	    this._vDecoder = new decoder.VideoDecoder(this);
@@ -5511,7 +5598,7 @@
 	      this.handleTicket();
 	    }, 10);
 	    this._statistic = setInterval(() => {
-	      console.log(`jitter buffer count ${this._gop.length}`);
+	      console.log(`----------------- jitter buffer count ${this._gop.length}`);
 	    }, 1000);
 	  }
 
@@ -5543,8 +5630,9 @@
 
 	      if (this._gop[this._gop.length - 1].timestamp - this._gop[0].timestamp > this._options.delay) {
 	        this._status = JitterBufferStatus.decoding;
+	        this.tryDropFrames();
 	        this._firstpacketts = this._gop[0].timestamp;
-	        this._firstts = this.caculateFirstTS();
+	        this._firstts = new Date().getTime();
 	        console.log(`gop buffer ok, delay ${this._options.delay}, last[${this._gop[this._gop.length - 1].timestamp}] first[${this._gop[0].timestamp}] factfirst[${this._firstts}]`);
 	        return true;
 	      }
@@ -5576,38 +5664,28 @@
 	    return false;
 	  }
 
-	  caculateFirstTS() {
-	    let now = new Date().getTime();
-
+	  tryDropFrames() {
 	    if (this._options.playmode === 'playback') {
-	      return now;
+	      return;
 	    }
 
-	    if (this._gop.length < 1) {
-	      return now;
-	    }
+	    let index = -1;
 
-	    let lastpackts = this._gop[this._gop.length - 1];
-	    let bf = false;
-	    let i = this._gop.length - 2;
+	    for (let i = 0; i < this._gop; i++) {
+	      let packet = this._gop[i];
 
-	    for (; i >= 0; i--) {
-	      // console.log(`buffer check, lastpacketts ${lastpackts.timestamp} i ${i} ts ${this._gop[i].timestamp} delay ${this._options.delay} `);
-	      if (lastpackts.timestamp - this._gop[i].timestamp >= this._options.delay) {
-	        bf = true;
-	        break;
+	      if (packet.avtype === AVType.Video && packet.iskeyframe) {
+	        index = i;
 	      }
-	    } // console.log(`buffer check foud ${bf}`)
-
-
-	    if (bf) {
-	      let diff = this._gop[i].timestamp - this._gop[0].timestamp;
-	      console.log(`buffering too much, gop cnt ${this._gop.length}, so just firsts ${now - diff}, now ${now}, diff ${diff}`);
-	      return now - diff;
 	    }
 
-	    console.log(`buffering normal, gop cnt ${this._gop.length}, so firsts ${now}`);
-	    return now;
+	    if (index > 0) {
+	      console.log(`tryDropFrames, find keyframe ${index} in gop, drop ${index} packet`);
+	      this._gop = this._gop.slice(index);
+	      return;
+	    }
+
+	    console.log(`tryDropFrames, find keyframe ${index} in gop, drop no packet`);
 	  }
 
 	  decodePacket(avpacket) {
@@ -5677,24 +5755,19 @@
 	    }, [data.buffer]);
 	  }
 
-	  audioInfo(atype, sampleRate, channels, samplesPerPacket) {
+	  audioInfo(atype, sampleRate, channels) {
 	    this._sampleRate = sampleRate;
 	    this._channels = channels;
-	    this._samplesPerPacket = samplesPerPacket;
 	    postMessage({
 	      cmd: WORKER_EVENT_TYPE.audioInfo,
 	      atype,
 	      sampleRate,
 	      channels,
-	      samplesPerPacket
+	      samplesPerPacket: this._options.samplesPerPacket
 	    });
 	  }
 
 	  pcmData(pcmDataArray, samples, timestamp) {
-	    if (samples !== this._samplesPerPacket) {
-	      console.warn(`pcm data samplesPerChannel ${samples} not equal samplesPerPacket ${this._samplesPerPacket}`);
-	    }
-
 	    let datas = [];
 
 	    for (let i = 0; i < this._channels; i++) {
@@ -5702,11 +5775,29 @@
 	      datas.push(Float32Array.of(...decoder.HEAPF32.subarray(fp, fp + samples))); // console.log(`worker thread pcm data[${i}] length ${datas[i].length} samples ${samples}`);
 	    }
 
-	    postMessage({
-	      cmd: WORKER_EVENT_TYPE.pcmData,
-	      datas,
-	      timestamp
-	    }, datas.map(x => x.buffer));
+	    if (!this._useSpliteBuffer) {
+	      if (samples === this._options.samplesPerPacket) {
+	        postMessage({
+	          cmd: WORKER_EVENT_TYPE.pcmData,
+	          datas,
+	          timestamp
+	        }, datas.map(x => x.buffer));
+	        return;
+	      }
+
+	      this._spliteBuffer = new SpliteBuffer(this._sampleRate, this._channels, this._options.samplesPerPacket);
+	      this._useSpliteBuffer = true;
+	    }
+
+	    this._spliteBuffer.addBuffer(datas, timestamp);
+
+	    this._spliteBuffer.splite((buffers, ts) => {
+	      postMessage({
+	        cmd: WORKER_EVENT_TYPE.pcmData,
+	        datas: buffers,
+	        timestamp: ts
+	      }, buffers.map(x => x.buffer));
+	    });
 	  }
 
 	  destory() {
