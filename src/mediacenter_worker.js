@@ -6,19 +6,9 @@ import SpliteBuffer from './utils/splitebuffer';
 import { caculateSamplesPerPacket } from './utils';
 
 
-const JitterBufferStatus = {
-    notstart: 'notstart',      //未开始
-    bufferring : 'bufferring',  //开始，等待缓冲满
-    decoding: 'decoding'        //开始解码
-}
-
-
 
 // 核心类，处理jitterbuffer, 播放控制，音画同步
 class MediaCenterInternal {
-
-    _vDecoder = undefined;
-    _aDecoder = undefined;
 
     _vDecoder = undefined;
     _aDecoder = undefined;
@@ -34,9 +24,6 @@ class MediaCenterInternal {
 
     _gop = [];
 
-    _status = JitterBufferStatus.notstart;
-    _firstts = 0;
-    _firstpacketts = 0;
 
     _timer = undefined;
     _statistic = undefined;
@@ -53,17 +40,22 @@ class MediaCenterInternal {
         this._aDecoder = new Module.AudioDecoder(this);
 
 
-    //   this._timer = setInterval(() => {
+      this._timer = setInterval(() => {
 
-    //     this.handleTicket();
+        let cnt = Math.min(10, this._gop.length);
+        while(cnt>0) {
+            this.handleTicket();
+            cnt--;
+        }
         
-    //   }, 10);
-
-    //   this._statistic = setInterval(() => {
-
-    //     console.log(`----------------- jitter buffer count ${this._gop.length}`);
         
-    //   }, 1000);
+      }, 25);
+
+      this._statistic = setInterval(() => {
+
+        console.log(`packet buffer count ${this._gop.length}`);
+        
+      }, 2000);
     }
 
     setOptions(options) {
@@ -76,101 +68,23 @@ class MediaCenterInternal {
 
     handleTicket() {
 
-
-        let next = true;
-
-        while (next) {
-
-            next = this.tryDispatch()
+        if (this._gop.length < 1) {
+            return;
         }
 
-    }
-
-    tryDispatch() {
-
-        if (this._status === JitterBufferStatus.notstart) {
-
-            if (this._gop.length < 1) {
-
-                return false;
-            }
-
-            this._status = JitterBufferStatus.bufferring;
-            return true;
-
-        } else if (this._status === JitterBufferStatus.bufferring) {
-
-            if (this._gop.length < 2) {
-                
-                return false;
-            }
-
-            if (this._gop[this._gop.length-1].timestamp - this._gop[0].timestamp > this._options.delay) {
-
-                this._status = JitterBufferStatus.decoding;
-
-             //   this.tryDropFrames();
-
-                this._firstpacketts = this._gop[0].timestamp;
-                this._firstts = new Date().getTime();
-
-                console.log(`gop buffer ok, delay ${this._options.delay}, last[${this._gop[this._gop.length-1].timestamp}] first[${ this._gop[0].timestamp}] factfirst[${this._firstts}]`);
-
-                return true;
-            }
-
-            return false;
-
-        } else if (this._status === JitterBufferStatus.decoding) {
-
-            if (this._gop.length < 1) {
-
-                console.log(`gop buffer is empty, restart buffering`);
-                this._status = JitterBufferStatus.bufferring;
-                return false;
-            }
-
-            let now = new Date().getTime();
-            let packet = this._gop[0];
-
-
-         //   console.log(`now ${now} firstts ${this._firstts}, packet.timestamp ${packet.timestamp} this._firstpacketts ${this._firstpacketts}`);
-
-            if (now - this._firstts >= packet.timestamp - this._firstpacketts) {
-
-                this.dispatchPacket(packet);
-                this._gop.shift();
-                return true;
-            }
-            
-            return false
-
-        } else {
-
-
-            console.error(`jittbuffer status [${this._status}]  error !!!`);
-        }
-
-        return false;
-
-    }
-
-
-    dispatchPacket(avpacket) {
+        let avpacket = this._gop.shift();
 
         if (avpacket.avtype === AVType.Video) {
 
-            postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data:avpacket.payload, width:this._width, height:this._height, timestamp:avpacket.timestamp}, [avpacket.payload.buffer]);
-  
+            this._vDecoder.decode(avpacket.payload, avpacket.timestamp);
+
         } else {
 
-            postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas:avpacket.payload, timestamp:avpacket.timestamp}, avpacket.payload.map(x => x.buffer));
-        
+            this._aDecoder.decode(avpacket.payload, avpacket.timestamp);
+
         }
 
     }
-
-
 
     setVideoCodec(vtype, extradata) {
 
@@ -179,8 +93,40 @@ class MediaCenterInternal {
 
     decodeVideo(videodata, timestamp, keyframe) {
 
-  
-        this._vDecoder.decode(videodata, timestamp);
+        let avpacket = new AVPacket();
+        avpacket.avtype = AVType.Video;
+        avpacket.payload = videodata;
+        avpacket.timestamp = timestamp,
+        avpacket.iskeyframe = keyframe;
+
+        if (keyframe && this._gop.length > 80) {
+
+            let bf = false;
+            let i = 0;
+            for (; i < this._gop.length; i++) {
+
+                let avpacket = this._gop[i];
+
+                if (avpacket.avtype === AVType.Video && avpacket.iskeyframe) {
+
+                    bf = true;
+                    break;
+                }
+            }
+
+            if (bf) {
+
+                console.warn(`packet buffer cache too much, drop ${this._gop.length - i} packet`)
+                this._gop = this._gop.slice(0, i-1);
+               
+            }
+
+        }
+
+
+        this._gop.push(avpacket);
+
+       // this._vDecoder.decode(videodata, timestamp);
     }
 
 
@@ -191,7 +137,14 @@ class MediaCenterInternal {
 
     decodeAudio(audiodata, timestamp) {
 
-        this._aDecoder.decode(audiodata, timestamp);
+        let avpacket = new AVPacket();
+        avpacket.avtype = AVType.Audio;
+        avpacket.payload = audiodata;
+        avpacket.timestamp = timestamp,
+
+        this._gop.push(avpacket);
+
+        // this._aDecoder.decode(audiodata, timestamp);
     }
 
     //callback
@@ -205,7 +158,7 @@ class MediaCenterInternal {
 
     yuvData(yuv, timestamp) {
 
-        if (timestamp - this._lastts > 0x3FFFFFFF) {
+        if (timestamp - this._lastts > 10000000) {
 
             console.log(`yuvdata timestamp error ${timestamp} last ${this._lastts}`);
             return;
@@ -218,6 +171,7 @@ class MediaCenterInternal {
 
         let data = Uint8Array.from(out);
 
+        
         postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, timestamp}, [data.buffer]);
 
     }
@@ -234,7 +188,7 @@ class MediaCenterInternal {
     pcmData(pcmDataArray, samples, timestamp) {
 
 
-        if (timestamp - this._lastts > 100000) {
+        if (timestamp - this._lastts > 10000000) {
 
             console.log(`pcmData timestamp error ${timestamp} last ${this._lastts}`);
             return;
@@ -277,7 +231,7 @@ class MediaCenterInternal {
     }
 
 
-    destory() {
+    destroy() {
 
         clearInterval(this._timer);
         clearInterval(this._statistic);
@@ -318,7 +272,7 @@ Module.postRun = function() {
 
             case WORKER_SEND_TYPE.decodeVideo: {
 
-                mcinternal.decodeVideo(msg.videodata, msg.timestamp)
+                mcinternal.decodeVideo(msg.videodata, msg.timestamp, msg.keyframe)
                 break;
             }
 
