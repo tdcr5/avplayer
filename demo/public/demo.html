@@ -10,6 +10,7 @@
 <body>
     <div>
         <button id="unmute" type="button">打开声音</button>
+        <button id="mute" type="button">关闭声音</button>
     </div>
     <div id="container" style="position: relative;">
         <video id="video" src="./flower.mp4" with=800 height=800 autoplay=true loop  playsinline=true muted=true></video>
@@ -59,9 +60,9 @@ function main() {
 
     let options = {
             container: $container,
-           url:'http://192.168.6.18:8080/live/nihao-12345.flv',
-            //   url:'http://192.168.6.18:8080/live/a123456.flv',
-            delay:300,
+            url:'http://192.168.6.18:8080/live/nihao-12345.flv',
+         //      url:'http://192.168.6.18:8080/live/a123456.flv',
+            delay:500,
             width:800,
             height:800,
             playmode:'live',
@@ -79,13 +80,21 @@ function main() {
 
     document.getElementById("unmute").onclick = () => {
 
-        console.log(`btn click`);
+        console.log(`unmute btn click`);
         p.unMute();
 
         document.getElementById("video").play();
 
     };
 
+    document.getElementById("mute").onclick = () => {
+
+    console.log(`mute btn click`);
+    p.mute();
+
+    document.getElementById("video").play();
+
+    };
 
 
 

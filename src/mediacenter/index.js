@@ -1,11 +1,19 @@
-import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE} from '../constant'
+import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE, AVType} from '../constant'
 import EventEmitter from '../utils/events.js';
+import JitterBuffer from './jitterbuffer';
+
+
+
+
+
 
 class MediaCenter extends EventEmitter  {
 
 
     _mediacenterWorker = undefined;
     _player;
+    _jitterBuffer = undefined;
+
 
     constructor (player) {
 
@@ -16,8 +24,8 @@ class MediaCenter extends EventEmitter  {
         this._player._logger.info('mediacenter', `start worker thread ${player._options.decoder}`);
         this._mediacenterWorker = new Worker(player._options.decoder);
 
-        this._mediacenterWorker.onmessageerror = (event) => {
 
+        this._mediacenterWorker.onmessageerror = (event) => {
 
             this._player._logger.info('mediacenter', `start worker thread err ${event}`);
         };
@@ -52,14 +60,8 @@ class MediaCenter extends EventEmitter  {
                     
                 case WORKER_EVENT_TYPE.yuvData: {
 
-                    let yuvpacket = {
-                        width:msg.width,
-                        height:msg.height,
-                        data:msg.data,
-                        timestamp:msg.timestamp
-                    };
+                    this._jitterBuffer.pushYUVData(msg.data, msg.timestamp, msg.width, msg.height);
                 
-                    this.emit('yuvdata', yuvpacket);
                     break;
                 }
 
@@ -72,12 +74,7 @@ class MediaCenter extends EventEmitter  {
      
                 case WORKER_EVENT_TYPE.pcmData: {
 
-                    let pcmpacket = {
-                        datas:msg.datas,
-                        timestamp:msg.timestamp
-                    };
-                
-                    this.emit('pcmdata', pcmpacket);
+                    this._jitterBuffer.pushPCMData(msg.datas, msg.timestamp);
                     break;
 
                 }
@@ -90,13 +87,33 @@ class MediaCenter extends EventEmitter  {
             }
 
         };
+
+        this._jitterBuffer = new JitterBuffer(player);
+
+        this._jitterBuffer.on('yuvdata', (yuvpacket) => {
+
+            this.emit('yuvdata', yuvpacket);
+
+        })
+
+    }
+
+    close() {
+
+        this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.close});
     }
 
     
     destroy() {
 
+        this.off();
+        this.close();
         this._mediacenterWorker.terminate();
-            
+    }
+
+    getPCMData(trust) {
+      
+      return this._jitterBuffer.getPCMData(trust);
     }
 
     setVideoCodec(vtype, extradata) {
@@ -129,7 +146,6 @@ class MediaCenter extends EventEmitter  {
     }
 
     decodeAudio(audiodata, timestamp) {
-
    
         this._mediacenterWorker.postMessage({
             cmd: WORKER_SEND_TYPE.decodeAudio,

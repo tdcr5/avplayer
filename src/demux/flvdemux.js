@@ -158,7 +158,7 @@ class FLVDemux extends EventEmitter {
                 dv.setUint8(2, remain[8]);
                 dv.setUint8(3, remain[11]);
 
-                this._dts = dv.getInt32(0, true);
+                this._dts = dv.getUint32(0, true);
 
                 let tagcommonheader = remain.slice(0, this._needlen);
                 remain = remain.slice(this._needlen);
@@ -182,7 +182,7 @@ class FLVDemux extends EventEmitter {
                         dv.setUint8(2, remain[2]);
                         dv.setUint8(3, 0);
 
-                        let compositiontime = dv.getInt32(0, true);
+                        let compositiontime = dv.getUint32(0, true);
                         this._pts = this._dts + compositiontime;
 
                         if (frametype === FrameType.KeyFrame) {

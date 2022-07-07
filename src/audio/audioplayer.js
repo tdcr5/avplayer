@@ -5,7 +5,6 @@ class AudioPlayer extends EventEmitter {
 
     _player = undefined;
     _audioContext = undefined;
-    _audioBuffer = undefined;
     _gainNode = undefined;
     _scriptNode = undefined;
     _playing = false;
@@ -15,13 +14,14 @@ class AudioPlayer extends EventEmitter {
     _channels = 0;
     _samplesPerPacket = 0;
 
+    _ticket = undefined;
+
     _init = false;
 
     constructor(player) {
 
         super();
 
-        this._audioBuffer = [];
         this._player = player;
 
         this._playing = false;
@@ -29,11 +29,6 @@ class AudioPlayer extends EventEmitter {
 
         this._player._logger.info('AudioPlayer', 'created');
 
-        this._statistic = setInterval(() => {
-
-            console.log(`----------- audio buffer count ${this._audioBuffer.length}`);
-            
-          }, 1000);
     }
 
     setAudioInfo(atype, samplerate, channels, samplesPerPacket) {
@@ -53,17 +48,30 @@ class AudioPlayer extends EventEmitter {
         
         let scriptNode = this._audioContext.createScriptProcessor(samplesPerPacket, 0, channels);
 
-        scriptNode.onaudioprocess = (audioProcessingEvent) => {
+        this._ticket = setInterval(() => {
+
+            if (this.isStateRunning()) {
+
+                return;
+            }
+
+            this._player.getPCMData(false);
+
 
             
+        }, Math.floor(samplesPerPacket*1000/samplerate));
+
+        scriptNode.onaudioprocess = (audioProcessingEvent) => {
 
             let outputBuffer = audioProcessingEvent.outputBuffer;
 
           //  this._player._logger.info('AudioPlayer', `onaudioprocess callback ${outputBuffer.sampleRate}`);
 
-            if (this._audioBuffer.length === 0) {
+          let pcmpacket = this._player.getPCMData(true);
 
-                this._player._logger.info('AudioPlayer', `------------ audiobuffer is empty`);
+            if (!pcmpacket) {
+
+                this._player._logger.warn('AudioPlayer', `audio buffer is empty`);
 
                 for (let i = 0; i < this._channels; i++) {
 
@@ -75,21 +83,13 @@ class AudioPlayer extends EventEmitter {
                 return;
             }
 
-            let bufferItem = this._audioBuffer.shift();
-
             for (let i = 0; i < this._channels; i++) {
-                let b = bufferItem.buffer[i];
+                let b = pcmpacket.datas[i];
                 let nowBuffering = outputBuffer.getChannelData(i);
               //  this._player._logger.info('AudioPlayer', `onaudioprocess callback outputBuffer[${i}] length ${nowBuffering.length}`);
                 for (let i = 0; i < this._samplesPerPacket; i++) {
                     nowBuffering[i] = b[i] || 0;
                 }
-            }
-
-            if (this._audioBuffer.length > 3) {
-
-                this._player._logger.info('AudioPlayer', `------------ audio buffer too much audio, drop ${this._audioBuffer.length - 3} buffer`);
-                this._audioBuffer = this._audioBuffer.slice(this._audioBuffer.length - 3);
             }
       
         }
@@ -185,24 +185,6 @@ class AudioPlayer extends EventEmitter {
         return this._audioContext.state === 'suspended';
     }
 
-    clear() {
-        this._audioBuffer = [];
-    }
-
-    pushAudio(buffer, ts) {
-
-        if(this.isStateSuspended()) {
-
-            return;
-        }
-
-        this._audioBuffer.push({
-            buffer,
-            ts
-        });
-
-        // this.player.debug.log('AudioContext', `bufferList is ${this.bufferList.length}`)
-    }
 
     pause() {
 
@@ -212,6 +194,11 @@ class AudioPlayer extends EventEmitter {
 
     resume() {
         this._playing = true;
+    }
+
+    clear() {
+
+        
     }
 
 

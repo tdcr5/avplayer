@@ -19,9 +19,8 @@ const DEFAULT_PLAYER_OPTIONS = {
     height:480,
 
 
-    delay:100,              //缓冲时长
+    delay:500,              //缓冲时长
     decoder:'decoder.js',    //work线程的js文件
-    samplesPerPacket:1024    //供audioplayer播放的音频采样数,必须是2的幂次[256 - 1024]
 }
 
 class AVPlayer {
@@ -179,26 +178,10 @@ class AVPlayer {
 
             this._logger.info('player', `mediacenter audio info atype ${atype} sampleRate ${sampleRate} channels ${channels}  samplesPerPacket ${samplesPerPacket}`);
             
-            this._audioplayer.setAudioInfo(atype, sampleRate, channels,samplesPerPacket);
+            this._audioplayer.setAudioInfo(atype, sampleRate, channels, samplesPerPacket);
             
         })
 
-        this._mediacenter.on('pcmdata', (pcmpacket) => {
-
-
-            this._pcmframerate++;
-
-            for(let data of pcmpacket.datas) {
-
-                this._pcmbitrate += data.length;
-            }
-
-            this._audioplayer.pushAudio(pcmpacket.datas, pcmpacket.timestamp);
-            
-         //  this._logger.info('player', `decoder pcmarray ${pcmpacket.datas.length} pcm[0] ${pcmpacket.datas[0].length} ts ${pcmpacket.timestamp}`);
-
-            
-        })
 
     }
 
@@ -215,6 +198,24 @@ class AVPlayer {
     mute() {
 
         this._audioplayer.mute();
+    }
+
+    getPCMData(trust)  {
+
+        let pcmpacket = this._mediacenter.getPCMData(trust);
+        
+        if (pcmpacket) {
+
+            this._pcmframerate++;
+
+            for(let data of pcmpacket.datas) {
+    
+                this._pcmbitrate += data.length;
+            }
+
+        }
+
+       return pcmpacket
     }
 
 
