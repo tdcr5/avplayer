@@ -113,8 +113,8 @@ class RectRender extends BaseRender {
 
         this._gl.deleteTexture(this._rgbatexture);
         this._gl.deleteTexture(this._ytexture);
-        this._gl.deleteBuffer(this._utexture);
-        this._gl.deleteBuffer(this._vtexture);
+        this._gl.deleteTexture(this._utexture);
+        this._gl.deleteTexture(this._vtexture);
 
         super.destroy();
     }
@@ -213,7 +213,7 @@ class RectRender extends BaseRender {
         }
 
         
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
+        gl.clearColor(0.0, 0.0, 0.0, 0.0);  // Clear to black, fully opaque
         gl.clearDepth(1.0);                 // Clear everything
         gl.enable(gl.DEPTH_TEST);           // Enable depth testing
         gl.depthFunc(gl.LEQUAL);            // Near things obscure far things

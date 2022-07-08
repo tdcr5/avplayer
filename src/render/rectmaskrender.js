@@ -126,8 +126,8 @@ class RectMaskRender extends BaseRender {
 
         this._gl.deleteTexture(this._rgbatexture);
         this._gl.deleteTexture(this._ytexture);
-        this._gl.deleteBuffer(this._utexture);
-        this._gl.deleteBuffer(this._vtexture);
+        this._gl.deleteTexture(this._utexture);
+        this._gl.deleteTexture(this._vtexture);
 
         super.destroy();
     }

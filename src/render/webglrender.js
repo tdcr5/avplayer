@@ -40,56 +40,94 @@ class WebGLRender {
     _render;
     _avplayer;
 
+    _renderMode;
+    _width;
+    _height;
+
     constructor(avplayer, canvas) {
 
         this._avplayer = avplayer;
-
         this._gl = createContextGL(canvas);
+        this._width = canvas.width;
+        this._height = canvas.height;
 
-        switch(avplayer._options.render) {
+        this._renderMode = avplayer._options.renderMode;
+
+        this.createRender();
+
+    }
+
+    createRender() {
+
+        if (this._render) {
+
+            this._render.destroy();
+            this._render = null
+        }
+
+        switch(this._renderMode) {
 
             case "normal": {
 
-                this._render = new RectRender(this._gl, canvas.width, canvas.height);
+                this._render = new RectRender(this._gl, this._width, this._height);
                 break;
             }
 
             case "green": {
 
-                this._render = new RectGreenRender(this._gl, canvas.width, canvas.height);
+                this._render = new RectGreenRender(this._gl, this._width, this._height);
                 break;
             }
 
             case "mask": {
 
-                this._render = new RectMaskRender(this._gl, canvas.width, canvas.height);
+                this._render = new RectMaskRender(this._gl, this._width, this._height);
                 break;
             }
 
             case "cube": {
 
-                this._render = new CubeRender(this._gl, canvas.width, canvas.height);
+                this._render = new CubeRender(this._gl, this._width, this._height);
                 break;
             }
 
             default: {
-                this._render = new RectRender(this._gl, canvas.width, canvas.height);
+                this._render = new RectRender(this._gl, this._width, this._height);
                 break;
             }
 
-        }
-
-        
+        } 
 
     }
 
-    
+    switchRender(renderMode) {
+
+        if (this._renderMode === renderMode) {
+
+            return;
+        }
+
+        this._renderMode = renderMode;
+
+        this.createRender();
+
+    }
+
+
     updateTexture(pixeltype, pixelbuf, width, height) {
 
         this._render.updateTexture(pixeltype, pixelbuf, width, height);
     }
 
+    destroy() {
 
+        if (this._render) {
+
+            this._render.destroy();
+            this._render = null
+        }
+
+    }
 
 
 

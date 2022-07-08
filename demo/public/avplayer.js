@@ -7,6 +7,8 @@
     class BaseRender {
       constructor() {}
 
+      destroy() {}
+
     }
 
     /**
@@ -527,7 +529,7 @@ void main(void) {
         this._gl.pixelStorei(this._gl.UNPACK_ALIGNMENT, 1);
 
         const shaderProgram = initShaderProgram$3(this._gl, vsSource$3, fsSource$3);
-        const programInfo = {
+        this._programInfo = {
           program: shaderProgram,
           attribLocations: {
             vertexPosition: this._gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
@@ -546,14 +548,14 @@ void main(void) {
         }; // Here's where we call the routine that builds all the
         // objects we'll be drawing.
 
-        const buffers = initBuffers$3(this._gl);
+        this._buffers = initBuffers$3(this._gl);
         this._rgbatexture = this.createTexture();
         this._ytexture = this.createTexture();
         this._utexture = this.createTexture();
         this._vtexture = this.createTexture();
         let deltaTime = -0.03;
         this._timer = setInterval(() => {
-          this.drawScene(programInfo, buffers, deltaTime);
+          this.drawScene(this._programInfo, this._buffers, deltaTime);
         }, 33);
       }
 
@@ -575,9 +577,9 @@ void main(void) {
 
         this._gl.deleteTexture(this._ytexture);
 
-        this._gl.deleteBuffer(this._utexture);
+        this._gl.deleteTexture(this._utexture);
 
-        this._gl.deleteBuffer(this._vtexture);
+        this._gl.deleteTexture(this._vtexture);
 
         super.destroy();
       }
@@ -949,9 +951,9 @@ void main(void) {
 
         this._gl.deleteTexture(this._ytexture);
 
-        this._gl.deleteBuffer(this._utexture);
+        this._gl.deleteTexture(this._utexture);
 
-        this._gl.deleteBuffer(this._vtexture);
+        this._gl.deleteTexture(this._vtexture);
 
         super.destroy();
       }
@@ -1025,7 +1027,7 @@ void main(void) {
           }
         }
 
-        gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
+        gl.clearColor(0.0, 0.0, 0.0, 0.0); // Clear to black, fully opaque
 
         gl.clearDepth(1.0); // Clear everything
 
@@ -1317,9 +1319,9 @@ void main(void) {
 
         this._gl.deleteTexture(this._ytexture);
 
-        this._gl.deleteBuffer(this._utexture);
+        this._gl.deleteTexture(this._utexture);
 
-        this._gl.deleteBuffer(this._vtexture);
+        this._gl.deleteTexture(this._vtexture);
 
         super.destroy();
       }
@@ -1679,9 +1681,9 @@ void main(void) {
 
         this._gl.deleteTexture(this._ytexture);
 
-        this._gl.deleteBuffer(this._utexture);
+        this._gl.deleteTexture(this._utexture);
 
-        this._gl.deleteBuffer(this._vtexture);
+        this._gl.deleteTexture(this._vtexture);
 
         super.destroy();
       }
@@ -1963,46 +1965,78 @@ void main(void) {
       _gl;
       _render;
       _avplayer;
+      _renderMode;
+      _width;
+      _height;
 
       constructor(avplayer, canvas) {
         this._avplayer = avplayer;
         this._gl = createContextGL(canvas);
+        this._width = canvas.width;
+        this._height = canvas.height;
+        this._renderMode = avplayer._options.renderMode;
+        this.createRender();
+      }
 
-        switch (avplayer._options.render) {
+      createRender() {
+        if (this._render) {
+          this._render.destroy();
+
+          this._render = null;
+        }
+
+        switch (this._renderMode) {
           case "normal":
             {
-              this._render = new RectRender(this._gl, canvas.width, canvas.height);
+              this._render = new RectRender(this._gl, this._width, this._height);
               break;
             }
 
           case "green":
             {
-              this._render = new RectGreenRender(this._gl, canvas.width, canvas.height);
+              this._render = new RectGreenRender(this._gl, this._width, this._height);
               break;
             }
 
           case "mask":
             {
-              this._render = new RectMaskRender(this._gl, canvas.width, canvas.height);
+              this._render = new RectMaskRender(this._gl, this._width, this._height);
               break;
             }
 
           case "cube":
             {
-              this._render = new CubeRender(this._gl, canvas.width, canvas.height);
+              this._render = new CubeRender(this._gl, this._width, this._height);
               break;
             }
 
           default:
             {
-              this._render = new RectRender(this._gl, canvas.width, canvas.height);
+              this._render = new RectRender(this._gl, this._width, this._height);
               break;
             }
         }
       }
 
+      switchRender(renderMode) {
+        if (this._renderMode === renderMode) {
+          return;
+        }
+
+        this._renderMode = renderMode;
+        this.createRender();
+      }
+
       updateTexture(pixeltype, pixelbuf, width, height) {
         this._render.updateTexture(pixeltype, pixelbuf, width, height);
+      }
+
+      destroy() {
+        if (this._render) {
+          this._render.destroy();
+
+          this._render = null;
+        }
       }
 
     }
@@ -2028,6 +2062,10 @@ void main(void) {
 
       updateTexture(pixeltype, pixelbuf, width, height) {
         this._webglrender.updateTexture(pixeltype, pixelbuf, width, height);
+      }
+
+      switchRender(renderMode) {
+        this._webglrender.switchRender(renderMode);
       }
 
       destroy() {
@@ -3682,9 +3720,9 @@ void main(void) {
       //播放地址
       container: '',
       //外部容器，用于放置渲染画面
-      playmode: 'live',
+      playMode: 'live',
       //live 或者 playback
-      render: 'normal',
+      renderMode: 'normal',
       // normal:正常, green:绿幕, mask:掩码, cube:方块
       width: 480,
       height: 480,
@@ -3827,32 +3865,6 @@ void main(void) {
         });
       }
 
-      destroy() {
-        this._stream.destroy();
-
-        this._demuxer.destroy();
-
-        this._mediacenter.destroy();
-
-        this._audioplayer.destroy();
-
-        this._render.destroy();
-
-        this._logger.info('player', `avplayer destroy`);
-      }
-
-      updateTexture(rgbabuf, width, height) {
-        this._render.updateTexture(PixelType.RGBA, rgbabuf, width, height);
-      }
-
-      unMute() {
-        this._audioplayer.unMute();
-      }
-
-      mute() {
-        this._audioplayer.mute();
-      }
-
       getPCMData(trust) {
         let pcmpacket = this._mediacenter.getPCMData(trust);
 
@@ -3865,6 +3877,33 @@ void main(void) {
         }
 
         return pcmpacket;
+      }
+
+      destroy() {
+        this._stream.destroy();
+
+        this._demuxer.destroy();
+
+        this._mediacenter.destroy();
+
+        this._audioplayer.destroy();
+
+        this._render.destroy();
+
+        this._logger.info('player', `avplayer destroy`);
+      } //public interface
+
+
+      unMute() {
+        this._audioplayer.unMute();
+      }
+
+      mute() {
+        this._audioplayer.mute();
+      }
+
+      switchRender(renderMode) {
+        this._render.switchRender(renderMode);
       }
 
     }

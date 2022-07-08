@@ -11,6 +11,12 @@
     <div>
         <button id="unmute" type="button">打开声音</button>
         <button id="mute" type="button">关闭声音</button>
+        <select id="rendermode">
+            <option value="normal">正常</option>
+            <option value="mask">掩码抠图</option>
+            <option value="green">绿幕抠图</option>
+            <option value="cube">立方体</option>
+        </select>
     </div>
     <div id="container" style="position: relative;">
         <video id="video" src="./flower.mp4" with=800 height=1000 autoplay=true loop  playsinline=true muted=true></video>
@@ -25,35 +31,6 @@
 
 
 
-
-function loadImage(url, callback) {
-
-
-
-
-
-  var image = new Image();
-  image.src = url;
-  image.crossOrigin = 'abc';
-  image.onload = ()=>{
-
-    let c = document.createElement("canvas");
-    c.width = image.width;
-    c.height = image.height;
-
-    let ctx = c.getContext('2d');
-
-    ctx.drawImage(image, 0, 0);
-
-    let rgba = ctx.getImageData(0, 0, c.width, c.height).data
-
-
-    callback(rgba, c.width, c.height);
-  };
-  return image;
-}
-
-
 function main() {
 
     let $container = document.getElementById('container');
@@ -61,21 +38,13 @@ function main() {
     let options = {
             container: $container,
            url:'http://192.168.6.18:8080/live/nihao-12345.flv',
-         //      url:'http://192.168.6.18:8080/live/a123456.flv',
-            delay:300,
-            width:540,
-            height:960,
-            playmode:'live',
-             render:'cube'
+           //   url:'http://192.168.6.18:8080/live/a123456.flv',
+            delay:500,
+            width:640,
+            height:640,
+            renderMode:'normal'
     };
     let p = new AVPlayer(options);
-
-    let img = loadImage('1.png',(rgba, width, height) => {
-
-
- //       p.updateTexture(rgba, width, height);
-
-    });
 
 
     document.getElementById("unmute").onclick = () => {
@@ -96,8 +65,13 @@ function main() {
 
     };
 
+    let selectCtrl = document.getElementById("rendermode");
 
+    selectCtrl.onchange = () => {
 
+        p.switchRender(selectCtrl.options[selectCtrl.options.selectedIndex].value);
+        console.log(`select ${selectCtrl.options[selectCtrl.options.selectedIndex].value}`);
+    }
 
 }
 

@@ -32,6 +32,14 @@ class CanvasRender {
         this._webglrender.updateTexture(pixeltype, pixelbuf, width, height);
     }
 
+
+    switchRender(renderMode) {
+
+        this._webglrender.switchRender(renderMode);
+
+    }
+
+
     destroy() {
 
         this._webglrender.destroy();

@@ -8,7 +8,10 @@ class BaseRender {
         
     }
 
+    destroy() {
 
+
+    }
 
 }
 

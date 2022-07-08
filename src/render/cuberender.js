@@ -73,7 +73,7 @@ class CubeRender extends BaseRender {
 
       const shaderProgram = initShaderProgram(this._gl, vsSource, fsSource);
     
-      const programInfo = {
+      this._programInfo = {
         program: shaderProgram,
         attribLocations: {
           vertexPosition: this._gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
@@ -90,10 +90,14 @@ class CubeRender extends BaseRender {
           isyuv: this._gl.getUniformLocation(shaderProgram, 'isyuv'),
         }
       };
+
+
+
     
       // Here's where we call the routine that builds all the
       // objects we'll be drawing.
-      const buffers = initBuffers(this._gl);
+      this._buffers = initBuffers(this._gl);
+
 
       this._rgbatexture = this.createTexture();
       this._ytexture = this.createTexture();
@@ -104,7 +108,7 @@ class CubeRender extends BaseRender {
 
       this._timer = setInterval(() => {
 
-        this.drawScene(programInfo, buffers, deltaTime);
+        this.drawScene(this._programInfo, this._buffers, deltaTime);
           
       }, 33);
 
@@ -126,8 +130,8 @@ class CubeRender extends BaseRender {
 
         this._gl.deleteTexture(this._rgbatexture);
         this._gl.deleteTexture(this._ytexture);
-        this._gl.deleteBuffer(this._utexture);
-        this._gl.deleteBuffer(this._vtexture);
+        this._gl.deleteTexture(this._utexture);
+        this._gl.deleteTexture(this._vtexture);
 
         super.destroy();
     }

@@ -12,9 +12,9 @@ const DEFAULT_PLAYER_OPTIONS = {
     container:'',           //外部容器，用于放置渲染画面
 
 
-    playmode:'live',        //live 或者 playback
+    playMode:'live',        //live 或者 playback
 
-    render:'normal', // normal:正常, green:绿幕, mask:掩码, cube:方块
+    renderMode:'normal', // normal:正常, green:绿幕, mask:掩码, cube:方块
     width:480,
     height:480,
     delay:500,              //缓冲时长
@@ -189,33 +189,6 @@ class AVPlayer {
 
     }
 
-    destroy() {
-
-        this._stream.destroy();
-        this._demuxer.destroy();
-        this._mediacenter.destroy();
-        this._audioplayer.destroy();
-        this._render.destroy();
-
-        this._logger.info('player', `avplayer destroy`)
-
-    }
-
-    updateTexture(rgbabuf, width, height) {
-
-        this._render.updateTexture(PixelType.RGBA, rgbabuf, width, height);
-    }
-
-    unMute() {
-
-        this._audioplayer.unMute();
-    }
-
-    mute() {
-
-        this._audioplayer.mute();
-    }
-
     getPCMData(trust)  {
 
         let pcmpacket = this._mediacenter.getPCMData(trust);
@@ -233,6 +206,39 @@ class AVPlayer {
 
        return pcmpacket
     }
+
+
+    destroy() {
+
+        this._stream.destroy();
+        this._demuxer.destroy();
+        this._mediacenter.destroy();
+        this._audioplayer.destroy();
+        this._render.destroy();
+
+        this._logger.info('player', `avplayer destroy`)
+
+    }
+
+    //public interface
+
+    unMute() {
+
+        this._audioplayer.unMute();
+    }
+
+    mute() {
+
+        this._audioplayer.mute();
+    }
+
+    switchRender(renderMode) {
+
+        this._render.switchRender(renderMode);
+
+    }
+
+
 
 
 }

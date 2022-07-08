@@ -33,6 +33,7 @@ class CylinderRender extends BaseRender {
     _gl = undefined;
     _width = 0;
     _height = 0;
+    _timer = undefined;
 
     constructor(gl, width, height) {
 
@@ -82,13 +83,35 @@ class CylinderRender extends BaseRender {
 
      let deltaTime = -0.02;
 
-      setInterval(() => {
+     this._timer = setInterval(() => {
 
         drawScene(this._gl, programInfo, buffers, deltaTime, width, height, this._texture);
           
       }, 33);
 
 
+    }
+    
+    destroy() {
+
+        if (this._timer) {
+
+            clearInterval(this._timer);
+            this._timer = undefined;
+        }
+
+        this._gl.deleteProgram(this._programInfo.program);
+
+        this._gl.deleteBuffer(this._buffers.position);
+        this._gl.deleteBuffer(this._buffers.texposition);
+        this._gl.deleteBuffer(this._buffers.indices);
+
+        this._gl.deleteTexture(this._rgbatexture);
+        this._gl.deleteTexture(this._ytexture);
+        this._gl.deleteTexture(this._utexture);
+        this._gl.deleteTexture(this._vtexture);
+
+        super.destroy();
     }
 
 
