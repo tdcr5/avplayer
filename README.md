@@ -1,5 +1,12 @@
 # avplayer
-    avplayer 是一个流媒体播放器，支持http-flv格式流，实现了自定义的一些渲染方式
+    avplayer 是一个流媒体播放器，支持http-flv格式流，实现了自定义的渲染方式renderMode
+
+    normal: 正常渲染
+    green: 图像如果带绿幕，绿幕部分抠图成透明
+    mask：图像右半部分带掩码图，则左半部显示并抠图成透明
+    cube: 渲染立方体显示
+
+
 
 
 # 编译解码wasm 
