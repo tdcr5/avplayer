@@ -45,14 +45,26 @@ class JitterBuffer extends EventEmitter {
           }, 2000);
     }
 
-    destroy() {
+    reset() {
 
         this._agop = [];
         this._vgop = [];
 
         if (this._playTimer) {
             clearInterval(this._playTimer);
+            this._playTimer = undefined;
         }
+
+        this._status = JitterBufferStatus.notstart;
+        this._strategy = DispatchStrategy.outAudioDriven;
+        this._firstpacketts = undefined; 
+        this._firstts = undefined;
+
+    }
+
+    destroy() {
+
+        this.reset();
 
         if (this._statisticTimer) {
             clearInterval(this._statisticTimer);

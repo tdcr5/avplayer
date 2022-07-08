@@ -102,6 +102,24 @@ class RectRender extends BaseRender {
 
     }
 
+    destroy() {
+
+
+        this._gl.deleteProgram(this._programInfo.program);
+
+        this._gl.deleteBuffer(this._buffers.position);
+        this._gl.deleteBuffer(this._buffers.texposition);
+        this._gl.deleteBuffer(this._buffers.indices);
+
+        this._gl.deleteTexture(this._rgbatexture);
+        this._gl.deleteTexture(this._ytexture);
+        this._gl.deleteBuffer(this._utexture);
+        this._gl.deleteBuffer(this._vtexture);
+
+        super.destroy();
+    }
+
+
 
     createTexture(){
 
@@ -163,8 +181,6 @@ class RectRender extends BaseRender {
         }
 
         this.drawScene()
-
-
 
     }
 

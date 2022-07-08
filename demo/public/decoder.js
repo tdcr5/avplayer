@@ -5458,11 +5458,14 @@
 	  decodeVideo: 'decodeVideo',
 	  setAudioCodec: 'setAudioCodec',
 	  decodeAudio: 'decodeAudio',
-	  close: 'close'
+	  reset: 'reset',
+	  destroy: 'destroy'
 	};
 	const WORKER_EVENT_TYPE = {
 	  created: 'created',
 	  inited: 'inited',
+	  reseted: 'reseted',
+	  destroyed: 'destroyed',
 	  videoInfo: 'videoInfo',
 	  yuvData: 'yuvData',
 	  audioInfo: 'audioInfo',
@@ -5610,6 +5613,19 @@
 	    this._options = options;
 	  }
 
+	  reset() {
+	    console.log(`work thiread reset, clear gop buffer & reset all Params`);
+	    this._gop = [];
+	    this._lastts = 0;
+	    this._useSpliteBuffer = false;
+	    this._spliteBuffer = undefined;
+	    this._width = 0;
+	    this._height = 0;
+	    this._sampleRate = 0;
+	    this._channels = 0;
+	    this.samplesPerPacket = 0;
+	  }
+
 	  handleTicket() {
 	    if (this._gop.length < 1) {
 	      return;
@@ -5752,6 +5768,14 @@
 	  }
 
 	  destroy() {
+	    this.reset();
+
+	    this._aDecoder.clear();
+
+	    this._vDecoder.clear();
+
+	    this._aDecoder = undefined;
+	    this._vDecoder = undefined;
 	    clearInterval(this._timer);
 	    clearInterval(this._statistic);
 	  }
@@ -5799,9 +5823,22 @@
 	          break;
 	        }
 
-	      case WORKER_SEND_TYPE.close:
+	      case WORKER_SEND_TYPE.reset:
+	        {
+	          mcinternal.reset();
+	          postMessage({
+	            cmd: WORKER_EVENT_TYPE.reseted
+	          });
+	          break;
+	        }
+
+	      case WORKER_SEND_TYPE.destroy:
 	        {
 	          mcinternal.destory();
+	          mcinternal = undefined;
+	          postMessage({
+	            cmd: WORKER_EVENT_TYPE.destroyed
+	          });
 	          break;
 	        }
 	    }

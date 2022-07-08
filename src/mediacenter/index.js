@@ -51,6 +51,19 @@ class MediaCenter extends EventEmitter  {
 
                 }
 
+                case WORKER_EVENT_TYPE.reseted: {
+
+                    this._jitterBuffer.reset();
+                    break;
+                }
+
+                case WORKER_EVENT_TYPE.destroyed: {
+
+                    this._mediacenterWorker.terminate();
+                    this._jitterBuffer.destroy();
+                    break;
+                }
+
                 case WORKER_EVENT_TYPE.videoInfo: {
 
                     this.emit('videoinfo', msg.vtype, msg.width, msg.height);
@@ -71,13 +84,15 @@ class MediaCenter extends EventEmitter  {
                     break;
                 }
 
-     
+
                 case WORKER_EVENT_TYPE.pcmData: {
 
                     this._jitterBuffer.pushPCMData(msg.datas, msg.timestamp);
                     break;
 
                 }
+
+
    
                 default: {
 
@@ -98,17 +113,17 @@ class MediaCenter extends EventEmitter  {
 
     }
 
-    close() {
+    reset() {
 
-        this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.close});
+        this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.reset});
     }
 
     
     destroy() {
 
         this.off();
-        this.close();
-        this._mediacenterWorker.terminate();
+        this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.destroy});
+ 
     }
 
     getPCMData(trust) {

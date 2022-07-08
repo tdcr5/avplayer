@@ -1,6 +1,6 @@
 import CanvasRender from './render/canvasrender.js';
 import Logger from './utils/logger.js';
-import FLVDemux from './demux/flvdemux.js';
+import FLVDemuxer from './demuxer/flvdemuxer.js';
 import FetchStream from './stream/fetchstream.js';
 import MediaCenter from './mediacenter/index.js';
 import { PixelType } from './constant/index.js';
@@ -17,9 +17,12 @@ const DEFAULT_PLAYER_OPTIONS = {
     render:'normal', // normal:正常, green:绿幕, mask:掩码, cube:方块
     width:480,
     height:480,
-
-
     delay:500,              //缓冲时长
+
+
+    retryCnt:-1,       //拉流失败重试次数
+    retryDelay: 5,     //重试时延 5000
+
     decoder:'decoder.js',    //work线程的js文件
 }
 
@@ -29,7 +32,7 @@ class AVPlayer {
 
     _render = undefined;
     _logger = undefined;
-    _demux = undefined;
+    _demuxer = undefined;
     _stream = undefined;
     _mediacenter = undefined;
     _audioplayer = undefined;
@@ -61,8 +64,8 @@ class AVPlayer {
         this._logger.info('player', `now play ${this._options.url}`);
 
 
-        this._stream = new FetchStream(this); //get strem from remote
-        this._demux = new FLVDemux(this);     // demux stream to h264/h265 aac/pcmu/pcma
+        this._demuxer = new FLVDemuxer(this);     // demux stream to h264/h265 aac/pcmu/pcma
+        this._stream = new FetchStream(this, this._demuxer); //get strem from remote
         this._mediacenter = new MediaCenter(this); //jitterbuffer & decoder h264/h265 -> yuv aac/pcmu/pcma -> fltp
         this._render = new CanvasRender(this);  // render yuv
         this._audioplayer = new AudioPlayer(this); // play fltp
@@ -109,7 +112,19 @@ class AVPlayer {
 
     registerEvents() {
 
-        this._demux.on('videoinfo', (videoinfo) => {
+        this._stream.on('finish', () => {
+
+
+
+        });
+
+        this._stream.on('retry', () => {
+
+            this._mediacenter.reset();
+
+        });
+
+        this._demuxer.on('videoinfo', (videoinfo) => {
 
             this._logger.info('player', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
 
@@ -117,22 +132,14 @@ class AVPlayer {
 
         })
 
-        this._demux.on('audioinfo', (audioinfo) => {
+        this._demuxer.on('audioinfo', (audioinfo) => {
 
             this._logger.info('player', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
             this._mediacenter.setAudioCodec(audioinfo.atype, audioinfo.extradata);
         })
 
-        this._demux.on('videodata', (packet) => {
-
-         //    this._logger.info('player', `recv VideoData ${packet.payload.length} keyframe:${packet.iskeyframe} pts:${packet.timestamp}`);
-            // for (let nal of packet.nals) {
-
-            //     let naltype = nal[4]&0x1F;
-            //     this._logger.info('player', `Parse Nal: ${naltype}`)
-
-            // }
+        this._demuxer.on('videodata', (packet) => {
 
             this._vframerate++;
             this._vbitrate += packet.payload.length;
@@ -141,11 +148,10 @@ class AVPlayer {
 
         })
 
-        this._demux.on('audiodata', (packet) => {
+        this._demuxer.on('audiodata', (packet) => {
 
             this._aframerate++;
             this._abitrate += packet.payload.length;
-          //  this._logger.info('player', `recv AudioData ${packet.payload.length} pts:${packet.timestamp}`);
 
           this._mediacenter.decodeAudio(packet.payload, packet.timestamp);
         })
@@ -170,7 +176,6 @@ class AVPlayer {
             this._yuvbitrate += yuvpacket.data.length;
        //     this._logger.info('player', `decoder yuvdata ${yuvpacket.data.length} ts ${yuvpacket.timestamp} width:${yuvpacket.width} height:${yuvpacket.height}`);
 
-       //     this._logger.info('player', `main yuv[0-5] ${ yuvpacket.data[0]} ${ yuvpacket.data[1]} ${ yuvpacket.data[2]} ${ yuvpacket.data[3]} ${ yuvpacket.data[4]} ${ yuvpacket.data[5]}`);
             this._render.updateTexture(PixelType.YUV, yuvpacket.data, yuvpacket.width, yuvpacket.height);
         })
 
@@ -182,6 +187,17 @@ class AVPlayer {
             
         })
 
+    }
+
+    destroy() {
+
+        this._stream.destroy();
+        this._demuxer.destroy();
+        this._mediacenter.destroy();
+        this._audioplayer.destroy();
+        this._render.destroy();
+
+        this._logger.info('player', `avplayer destroy`)
 
     }
 

@@ -59,6 +59,8 @@ class CubeRender extends BaseRender {
     _height = 0;
     _pixeltype = PixelType.YUV;
 
+    _timer = undefined;
+
     constructor(gl, width, height) {
 
         super();
@@ -100,13 +102,34 @@ class CubeRender extends BaseRender {
 
       let deltaTime = -0.03;
 
-      setInterval(() => {
+      this._timer = setInterval(() => {
 
         this.drawScene(programInfo, buffers, deltaTime);
           
       }, 33);
 
+    }
 
+    destroy() {
+
+        if (this._timer) {
+
+            clearInterval(this._timer);
+            this._timer = undefined;
+        }
+
+        this._gl.deleteProgram(this._programInfo.program);
+
+        this._gl.deleteBuffer(this._buffers.position);
+        this._gl.deleteBuffer(this._buffers.texposition);
+        this._gl.deleteBuffer(this._buffers.indices);
+
+        this._gl.deleteTexture(this._rgbatexture);
+        this._gl.deleteTexture(this._ytexture);
+        this._gl.deleteBuffer(this._utexture);
+        this._gl.deleteBuffer(this._vtexture);
+
+        super.destroy();
     }
 
 

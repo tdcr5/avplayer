@@ -82,7 +82,7 @@ const FLV_Parse_State = {
     TagPayload:2
 }
 
-class FLVDemux extends EventEmitter {
+class FLVDemuxer extends EventEmitter {
 
     _buffer = undefined;
 
@@ -101,12 +101,19 @@ class FLVDemux extends EventEmitter {
 
         this._avplayer = avplayer;
 
+        this.reset();
+        
+    }
+
+    reset() {
+
         this._videoinfo = new VideoInfo();
         this._audioinfo = new AudioInfo();
 
         this._state = FLV_Parse_State.Init;
         this._needlen = 9;
-        
+        this._buffer = undefined;
+
     }
 
     
@@ -472,4 +479,4 @@ function ParseSPSAndPPS(videData) {
 
 
 
-export default FLVDemux;
+export default FLVDemuxer;

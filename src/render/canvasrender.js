@@ -32,6 +32,13 @@ class CanvasRender {
         this._webglrender.updateTexture(pixeltype, pixelbuf, width, height);
     }
 
+    destroy() {
+
+        this._webglrender.destroy();
+        this._avplayer._container.removeChild(this._videoElement);
+
+    }
+
 
 }
 

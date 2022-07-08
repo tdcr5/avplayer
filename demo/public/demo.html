@@ -60,13 +60,13 @@ function main() {
 
     let options = {
             container: $container,
-            url:'http://192.168.6.18:8080/live/nihao-12345.flv',
+           url:'http://192.168.6.18:8080/live/nihao-12345.flv',
          //      url:'http://192.168.6.18:8080/live/a123456.flv',
-            delay:1000,
+            delay:300,
             width:540,
-            height:540,
+            height:960,
             playmode:'live',
-             render:'mask'
+             render:'cube'
     };
     let p = new AVPlayer(options);
 

@@ -53,13 +53,16 @@ const WORKER_SEND_TYPE = {
     decodeVideo: 'decodeVideo',
     setAudioCodec: 'setAudioCodec',
     decodeAudio: 'decodeAudio',
-    close: 'close'
+    reset: 'reset',
+    destroy: 'destroy',
 }
 
 
 const WORKER_EVENT_TYPE = {
     created:'created',
     inited:'inited',
+    reseted: 'reseted',
+    destroyed: 'destroyed',
     videoInfo: 'videoInfo',
     yuvData: 'yuvData',
     audioInfo: 'audioInfo',

@@ -56,7 +56,7 @@ public:
     virtual ~Decoder();
 
     void initCodec(enum AVCodecID codecID);
-    void clear();
+    virtual void clear();
     void decode(u8* buffer, u32 bufferLen, u32 timestamp);
 
     virtual void frameReady(u32 timestamp) {};
@@ -142,6 +142,7 @@ public:
 
     void decode(string input, u32 timestamp);
 
+    virtual void clear();
     virtual void frameReady(u32 timestamp);
 
 };
@@ -153,9 +154,21 @@ VideoDecoder::VideoDecoder(val&& v) : Decoder(move(v)) {
 
 VideoDecoder::~VideoDecoder() {
 
+    clear();
+
+}
+
+void VideoDecoder::clear() {
+
     if (mYUV) {
         free(mYUV);
+        mYUV = nullptr;
     }
+
+    mVideoWith = 0;
+    mVideoHeight = 0;
+
+    Decoder::clear();
 }
 
 void VideoDecoder::setCodec(u32 vtype, string extra)
@@ -163,12 +176,8 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
 
     printf("VideoDecoder::setCodec vtype %d, extra %d \n", vtype, extra.length());
     
-    if (mInit) {
-
-        printf("VideoDecoder has Init when setcodec\n");
-        return;
-    }
-
+  
+    clear();
 
     enum AVCodecID codecID;
 
@@ -307,7 +316,7 @@ public:
 
     SwrContext *mConvertCtx = nullptr;
     u8 *mOutBuffer[2];
-    int mOutputSamples;
+
     bool mNotifyAudioParam;
     int mAVType;
 
@@ -320,7 +329,7 @@ public:
     void setCodec(u32 atype, string extra);
 
     void decode(string input, u32 timestamp);
-
+    virtual void clear();
     virtual void frameReady(u32 timestamp) ;
 
 };
@@ -337,7 +346,9 @@ AudioDecoder::AudioDecoder(val&& v) : Decoder(move(v)) {
     mNotifyAudioParam = false;
 }
 
-AudioDecoder::~AudioDecoder() {
+
+void AudioDecoder::clear() {
+
 
     if (mConvertCtx) {
         swr_free(&mConvertCtx);
@@ -349,15 +360,22 @@ AudioDecoder::~AudioDecoder() {
         mOutBuffer[0] = nullptr;
     }
 
+    mOutBuffer[1] = nullptr;
+    mNotifyAudioParam = false;
+
+    Decoder::clear();
+}
+
+
+AudioDecoder::~AudioDecoder() {
+
+    clear();
 }
 
 void AudioDecoder::setCodec(u32 atype, string extra)
 {
     
-    if (mInit) {
-
-        return;
-    }
+    clear();
  
     switch (atype)
     {
@@ -463,9 +481,11 @@ EMSCRIPTEN_BINDINGS(my_module) {
      class_<VideoDecoder>("VideoDecoder")
     .constructor<val>()
     .function("setCodec", &VideoDecoder::setCodec)
-    .function("decode", &VideoDecoder::decode);
+    .function("decode", &VideoDecoder::decode)
+    .function("clear", &VideoDecoder::clear);
     class_<AudioDecoder>("AudioDecoder")
     .constructor<val>()
     .function("setCodec", &AudioDecoder::setCodec)
-    .function("decode", &AudioDecoder::decode);
+    .function("decode", &AudioDecoder::decode)
+    .function("clear", &AudioDecoder::clear);
 }

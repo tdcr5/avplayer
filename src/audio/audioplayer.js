@@ -33,6 +33,8 @@ class AudioPlayer extends EventEmitter {
 
     setAudioInfo(atype, samplerate, channels, samplesPerPacket) {
 
+        this.clear();
+
         this._atype = atype;
         this._samplerate = samplerate;
         this._channels = channels;
@@ -125,7 +127,6 @@ class AudioPlayer extends EventEmitter {
 
         this.setVolume(0);
         this.audioEnabled(false);
-        this.clear();
     }
 
     unMute() {
@@ -151,13 +152,6 @@ class AudioPlayer extends EventEmitter {
         this._gainNode.gain.setValueAtTime(volume, this._audioContext.currentTime);
     }
 
-    closeAudio() {
-        if (this.init) {
-            this.scriptNode && this.scriptNode.disconnect(this._gainNode);
-            this._gainNode && this._gainNode.disconnect(this._audioContext.destination);
-        }
-        this.clear();
-    }
 
     // 是否播放。。。
     audioEnabled(flag) {
@@ -189,7 +183,6 @@ class AudioPlayer extends EventEmitter {
     pause() {
 
         this._playing = false;
-        this.clear();
     }
 
     resume() {
@@ -198,22 +191,42 @@ class AudioPlayer extends EventEmitter {
 
     clear() {
 
-        
+        if (this._ticket) {
+
+            clearInterval(this._ticket);
+            this._ticket = this.undefined;
+        }
+
+        if (this._scriptNode) {
+
+            this._scriptNode.disconnect(this._gainNode);
+            this._scriptNode.onaudioprocess = undefined;
+            this._scriptNode = undefined;
+        }
+
+        if (this._gainNode) {
+
+            this._gainNode.disconnect(this._audioContext.destination);
+            this._gainNode = undefined;
+        }
+
+        if (this._audioContext) {
+            this._audioContext.close();
+            this._audioContext = null;
+        }
+
+        this._playing = false;
+        this._init = false;
+
+        this._player._logger.info('AudioPlayer', 'AudioPlayer clear resouce');
     }
 
 
     destroy() {
-        this.closeAudio();
-        this._audioContext.close();
-        this._audioContext = null;
-        this._gainNode = null;
-        this.init = false;
-        if (this._scriptNode) {
-            this._scriptNode.onaudioprocess = undefined;
-            this._scriptNode = null;
-        }
+
+        this.clear();
         this.off();
-        this._player._logger.info('AudioPlayer', 'destroy');
+        this._player._logger.info('AudioPlayer', 'AudioPlayer destroy');
     }
 
 }

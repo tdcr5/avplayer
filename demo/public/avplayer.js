@@ -453,11 +453,14 @@
       decodeVideo: 'decodeVideo',
       setAudioCodec: 'setAudioCodec',
       decodeAudio: 'decodeAudio',
-      close: 'close'
+      reset: 'reset',
+      destroy: 'destroy'
     };
     const WORKER_EVENT_TYPE = {
       created: 'created',
       inited: 'inited',
+      reseted: 'reseted',
+      destroyed: 'destroyed',
       videoInfo: 'videoInfo',
       yuvData: 'yuvData',
       audioInfo: 'audioInfo',
@@ -513,6 +516,7 @@ void main(void) {
       _width = 0;
       _height = 0;
       _pixeltype = PixelType.YUV;
+      _timer = undefined;
 
       constructor(gl, width, height) {
         super();
@@ -548,9 +552,34 @@ void main(void) {
         this._utexture = this.createTexture();
         this._vtexture = this.createTexture();
         let deltaTime = -0.03;
-        setInterval(() => {
+        this._timer = setInterval(() => {
           this.drawScene(programInfo, buffers, deltaTime);
         }, 33);
+      }
+
+      destroy() {
+        if (this._timer) {
+          clearInterval(this._timer);
+          this._timer = undefined;
+        }
+
+        this._gl.deleteProgram(this._programInfo.program);
+
+        this._gl.deleteBuffer(this._buffers.position);
+
+        this._gl.deleteBuffer(this._buffers.texposition);
+
+        this._gl.deleteBuffer(this._buffers.indices);
+
+        this._gl.deleteTexture(this._rgbatexture);
+
+        this._gl.deleteTexture(this._ytexture);
+
+        this._gl.deleteBuffer(this._utexture);
+
+        this._gl.deleteBuffer(this._vtexture);
+
+        super.destroy();
       }
 
       createTexture() {
@@ -907,6 +936,26 @@ void main(void) {
         this._vtexture = this.createTexture();
       }
 
+      destroy() {
+        this._gl.deleteProgram(this._programInfo.program);
+
+        this._gl.deleteBuffer(this._buffers.position);
+
+        this._gl.deleteBuffer(this._buffers.texposition);
+
+        this._gl.deleteBuffer(this._buffers.indices);
+
+        this._gl.deleteTexture(this._rgbatexture);
+
+        this._gl.deleteTexture(this._ytexture);
+
+        this._gl.deleteBuffer(this._utexture);
+
+        this._gl.deleteBuffer(this._vtexture);
+
+        super.destroy();
+      }
+
       createTexture() {
         let texture = this._gl.createTexture();
 
@@ -1255,6 +1304,26 @@ void main(void) {
         this._vtexture = this.createTexture();
       }
 
+      destroy() {
+        this._gl.deleteProgram(this._programInfo.program);
+
+        this._gl.deleteBuffer(this._buffers.position);
+
+        this._gl.deleteBuffer(this._buffers.texposition);
+
+        this._gl.deleteBuffer(this._buffers.indices);
+
+        this._gl.deleteTexture(this._rgbatexture);
+
+        this._gl.deleteTexture(this._ytexture);
+
+        this._gl.deleteBuffer(this._utexture);
+
+        this._gl.deleteBuffer(this._vtexture);
+
+        super.destroy();
+      }
+
       createTexture() {
         let texture = this._gl.createTexture();
 
@@ -1595,6 +1664,26 @@ void main(void) {
         this._ytexture = this.createTexture();
         this._utexture = this.createTexture();
         this._vtexture = this.createTexture();
+      }
+
+      destroy() {
+        this._gl.deleteProgram(this._programInfo.program);
+
+        this._gl.deleteBuffer(this._buffers.position);
+
+        this._gl.deleteBuffer(this._buffers.texposition);
+
+        this._gl.deleteBuffer(this._buffers.indices);
+
+        this._gl.deleteTexture(this._rgbatexture);
+
+        this._gl.deleteTexture(this._ytexture);
+
+        this._gl.deleteBuffer(this._utexture);
+
+        this._gl.deleteBuffer(this._vtexture);
+
+        super.destroy();
       }
 
       createTexture() {
@@ -1939,6 +2028,12 @@ void main(void) {
 
       updateTexture(pixeltype, pixelbuf, width, height) {
         this._webglrender.updateTexture(pixeltype, pixelbuf, width, height);
+      }
+
+      destroy() {
+        this._webglrender.destroy();
+
+        this._avplayer._container.removeChild(this._videoElement);
       }
 
     }
@@ -2576,7 +2671,7 @@ void main(void) {
       TagPayload: 2
     };
 
-    class FLVDemux extends EventEmitter {
+    class FLVDemuxer extends EventEmitter {
       _buffer = undefined;
       _needlen = 0;
       _state = 0;
@@ -2589,10 +2684,15 @@ void main(void) {
       constructor(avplayer) {
         super();
         this._avplayer = avplayer;
+        this.reset();
+      }
+
+      reset() {
         this._videoinfo = new VideoInfo();
         this._audioinfo = new AudioInfo();
         this._state = FLV_Parse_State.Init;
         this._needlen = 9;
+        this._buffer = undefined;
       }
 
       dispatch(data) {
@@ -2840,14 +2940,22 @@ void main(void) {
     class FetchStream extends EventEmitter {
       _avplayer = undefined;
       _abort = undefined;
+      _demuxer = undefined;
+      _retryTimer = undefined;
+      _retryCnt = 0;
 
-      constructor(avplayer) {
+      constructor(avplayer, demuxer) {
         super();
         this._avplayer = avplayer;
+        this._demuxer = demuxer;
         this._abort = new AbortController();
       }
 
       start() {
+        this._retryCnt++;
+
+        this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} start, Cnt ${this._retryCnt}`);
+
         fetch(this._avplayer._options.url, {
           signal: this._abort.signal
         }).then(res => {
@@ -2859,8 +2967,12 @@ void main(void) {
               value
             } = await reader.read();
 
-            if (done) ; else {
-              this._avplayer._demux.dispatch(value);
+            if (done) {
+              this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} done, Cnt ${this._retryCnt}`);
+
+              this.retry();
+            } else {
+              this._demuxer.dispatch(value);
 
               fetchNext();
             }
@@ -2868,8 +2980,32 @@ void main(void) {
 
           fetchNext();
         }).catch(e => {
-          this.stop();
+          this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} error ${e}, Cnt ${this._retryCnt}`);
+
+          this.retry();
         });
+      }
+
+      retry() {
+        this.stop();
+
+        if (this._avplayer._options._retryCnt >= 0 && this._retryCnt > this.this._avplayer._options._retryCnt) {
+          this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} finish because reach retryCnt, Cnt ${this._retryCnt} optionsCnt ${this._avplayer._options._retryCnt}`);
+
+          this.emit('finish');
+          return;
+        }
+
+        this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} retry, start retry timer delay ${this._avplayer._options.retryDelay} sec`);
+
+        this._abort = new AbortController();
+
+        this._demuxer.reset();
+
+        this._retryTimer = setTimeout(() => {
+          this.start();
+        }, this._avplayer._options.retryDelay * 1000);
+        this.emit('retry');
       }
 
       stop() {
@@ -2877,6 +3013,11 @@ void main(void) {
           this._abort.abort();
 
           this._abort = undefined;
+        }
+
+        if (this._retryTimer) {
+          clearTimeout(this._retryTimer);
+          this._retryTimer = undefined;
         }
       }
 
@@ -2925,13 +3066,23 @@ void main(void) {
         }, 2000);
       }
 
-      destroy() {
+      reset() {
         this._agop = [];
         this._vgop = [];
 
         if (this._playTimer) {
           clearInterval(this._playTimer);
+          this._playTimer = undefined;
         }
+
+        this._status = JitterBufferStatus.notstart;
+        this._strategy = DispatchStrategy.outAudioDriven;
+        this._firstpacketts = undefined;
+        this._firstts = undefined;
+      }
+
+      destroy() {
+        this.reset();
 
         if (this._statisticTimer) {
           clearInterval(this._statisticTimer);
@@ -3217,6 +3368,22 @@ void main(void) {
                 break;
               }
 
+            case WORKER_EVENT_TYPE.reseted:
+              {
+                this._jitterBuffer.reset();
+
+                break;
+              }
+
+            case WORKER_EVENT_TYPE.destroyed:
+              {
+                this._mediacenterWorker.terminate();
+
+                this._jitterBuffer.destroy();
+
+                break;
+              }
+
             case WORKER_EVENT_TYPE.videoInfo:
               {
                 this.emit('videoinfo', msg.vtype, msg.width, msg.height);
@@ -3252,17 +3419,18 @@ void main(void) {
         });
       }
 
-      close() {
+      reset() {
         this._mediacenterWorker.postMessage({
-          cmd: WORKER_SEND_TYPE.close
+          cmd: WORKER_SEND_TYPE.reset
         });
       }
 
       destroy() {
         this.off();
-        this.close();
 
-        this._mediacenterWorker.terminate();
+        this._mediacenterWorker.postMessage({
+          cmd: WORKER_SEND_TYPE.destroy
+        });
       }
 
       getPCMData(trust) {
@@ -3331,6 +3499,7 @@ void main(void) {
       }
 
       setAudioInfo(atype, samplerate, channels, samplesPerPacket) {
+        this.clear();
         this._atype = atype;
         this._samplerate = samplerate;
         this._channels = channels;
@@ -3410,7 +3579,6 @@ void main(void) {
 
         this.setVolume(0);
         this.audioEnabled(false);
-        this.clear();
       }
 
       unMute() {
@@ -3434,15 +3602,6 @@ void main(void) {
         this._gainNode.gain.value = volume;
 
         this._gainNode.gain.setValueAtTime(volume, this._audioContext.currentTime);
-      }
-
-      closeAudio() {
-        if (this.init) {
-          this.scriptNode && this.scriptNode.disconnect(this._gainNode);
-          this._gainNode && this._gainNode.disconnect(this._audioContext.destination);
-        }
-
-        this.clear();
       } // 是否播放。。。
 
 
@@ -3472,32 +3631,48 @@ void main(void) {
 
       pause() {
         this._playing = false;
-        this.clear();
       }
 
       resume() {
         this._playing = true;
       }
 
-      clear() {}
-
-      destroy() {
-        this.closeAudio();
-
-        this._audioContext.close();
-
-        this._audioContext = null;
-        this._gainNode = null;
-        this.init = false;
-
-        if (this._scriptNode) {
-          this._scriptNode.onaudioprocess = undefined;
-          this._scriptNode = null;
+      clear() {
+        if (this._ticket) {
+          clearInterval(this._ticket);
+          this._ticket = this.undefined;
         }
 
+        if (this._scriptNode) {
+          this._scriptNode.disconnect(this._gainNode);
+
+          this._scriptNode.onaudioprocess = undefined;
+          this._scriptNode = undefined;
+        }
+
+        if (this._gainNode) {
+          this._gainNode.disconnect(this._audioContext.destination);
+
+          this._gainNode = undefined;
+        }
+
+        if (this._audioContext) {
+          this._audioContext.close();
+
+          this._audioContext = null;
+        }
+
+        this._playing = false;
+        this._init = false;
+
+        this._player._logger.info('AudioPlayer', 'AudioPlayer clear resouce');
+      }
+
+      destroy() {
+        this.clear();
         this.off();
 
-        this._player._logger.info('AudioPlayer', 'destroy');
+        this._player._logger.info('AudioPlayer', 'AudioPlayer destroy');
       }
 
     }
@@ -3515,6 +3690,10 @@ void main(void) {
       height: 480,
       delay: 500,
       //缓冲时长
+      retryCnt: -1,
+      //拉流失败重试次数
+      retryDelay: 5,
+      //重试时延 5000
       decoder: 'decoder.js' //work线程的js文件
 
     };
@@ -3523,7 +3702,7 @@ void main(void) {
       _options = undefined;
       _render = undefined;
       _logger = undefined;
-      _demux = undefined;
+      _demuxer = undefined;
       _stream = undefined;
       _mediacenter = undefined;
       _audioplayer = undefined; //统计
@@ -3549,9 +3728,9 @@ void main(void) {
 
         this._logger.info('player', `now play ${this._options.url}`);
 
-        this._stream = new FetchStream(this); //get strem from remote
+        this._demuxer = new FLVDemuxer(this); // demux stream to h264/h265 aac/pcmu/pcma
 
-        this._demux = new FLVDemux(this); // demux stream to h264/h265 aac/pcmu/pcma
+        this._stream = new FetchStream(this, this._demuxer); //get strem from remote
 
         this._mediacenter = new MediaCenter(this); //jitterbuffer & decoder h264/h265 -> yuv aac/pcmu/pcma -> fltp
 
@@ -3591,33 +3770,34 @@ void main(void) {
       }
 
       registerEvents() {
-        this._demux.on('videoinfo', videoinfo => {
+        this._stream.on('finish', () => {});
+
+        this._stream.on('retry', () => {
+          this._mediacenter.reset();
+        });
+
+        this._demuxer.on('videoinfo', videoinfo => {
           this._logger.info('player', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
 
           this._mediacenter.setVideoCodec(videoinfo.vtype, videoinfo.extradata);
         });
 
-        this._demux.on('audioinfo', audioinfo => {
+        this._demuxer.on('audioinfo', audioinfo => {
           this._logger.info('player', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
           this._mediacenter.setAudioCodec(audioinfo.atype, audioinfo.extradata);
         });
 
-        this._demux.on('videodata', packet => {
-          //    this._logger.info('player', `recv VideoData ${packet.payload.length} keyframe:${packet.iskeyframe} pts:${packet.timestamp}`);
-          // for (let nal of packet.nals) {
-          //     let naltype = nal[4]&0x1F;
-          //     this._logger.info('player', `Parse Nal: ${naltype}`)
-          // }
+        this._demuxer.on('videodata', packet => {
           this._vframerate++;
           this._vbitrate += packet.payload.length;
 
           this._mediacenter.decodeVideo(packet.payload, packet.timestamp, packet.iskeyframe);
         });
 
-        this._demux.on('audiodata', packet => {
+        this._demuxer.on('audiodata', packet => {
           this._aframerate++;
-          this._abitrate += packet.payload.length; //  this._logger.info('player', `recv AudioData ${packet.payload.length} pts:${packet.timestamp}`);
+          this._abitrate += packet.payload.length;
 
           this._mediacenter.decodeAudio(packet.payload, packet.timestamp);
         });
@@ -3636,7 +3816,6 @@ void main(void) {
         this._mediacenter.on('yuvdata', yuvpacket => {
           this._yuvframerate++;
           this._yuvbitrate += yuvpacket.data.length; //     this._logger.info('player', `decoder yuvdata ${yuvpacket.data.length} ts ${yuvpacket.timestamp} width:${yuvpacket.width} height:${yuvpacket.height}`);
-          //     this._logger.info('player', `main yuv[0-5] ${ yuvpacket.data[0]} ${ yuvpacket.data[1]} ${ yuvpacket.data[2]} ${ yuvpacket.data[3]} ${ yuvpacket.data[4]} ${ yuvpacket.data[5]}`);
 
           this._render.updateTexture(PixelType.YUV, yuvpacket.data, yuvpacket.width, yuvpacket.height);
         });
@@ -3646,6 +3825,20 @@ void main(void) {
 
           this._audioplayer.setAudioInfo(atype, sampleRate, channels, samplesPerPacket);
         });
+      }
+
+      destroy() {
+        this._stream.destroy();
+
+        this._demuxer.destroy();
+
+        this._mediacenter.destroy();
+
+        this._audioplayer.destroy();
+
+        this._render.destroy();
+
+        this._logger.info('player', `avplayer destroy`);
       }
 
       updateTexture(rgbabuf, width, height) {
