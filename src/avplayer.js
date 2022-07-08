@@ -63,7 +63,6 @@ class AVPlayer {
 
         this._logger.info('player', `now play ${this._options.url}`);
 
-
         this._demuxer = new FLVDemuxer(this);     // demux stream to h264/h265 aac/pcmu/pcma
         this._stream = new FetchStream(this, this._demuxer); //get strem from remote
         this._mediacenter = new MediaCenter(this); //jitterbuffer & decoder h264/h265 -> yuv aac/pcmu/pcma -> fltp

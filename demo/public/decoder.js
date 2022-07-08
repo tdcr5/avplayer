@@ -5834,7 +5834,7 @@
 
 	      case WORKER_SEND_TYPE.destroy:
 	        {
-	          mcinternal.destory();
+	          mcinternal.destroy();
 	          mcinternal = undefined;
 	          postMessage({
 	            cmd: WORKER_EVENT_TYPE.destroyed

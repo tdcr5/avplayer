@@ -17,6 +17,9 @@
             <option value="green">绿幕抠图</option>
             <option value="cube">立方体</option>
         </select>
+        <input id="address" type="text" style="width: 300px;"value="http://192.168.6.18:8080/live/a123456.flv" />
+        <button id="play" type="button">播放</button>
+        <button id="stop" type="button">停止</button>
     </div>
     <div id="container" style="position: relative;">
         <video id="video" src="./flower.mp4" with=800 height=1000 autoplay=true loop  playsinline=true muted=true></video>
@@ -34,42 +37,81 @@
 function main() {
 
     let $container = document.getElementById('container');
+    let selectCtrl = document.getElementById("rendermode");
+    let addrinput = document.getElementById("address");
 
-    let options = {
+
+    let player = undefined;
+    
+    document.getElementById("play").onclick = () => {
+
+        console.log(`play btn click`);
+
+       document.getElementById("video").play();
+
+       if (player) {
+
+            player.destroy();
+       }
+
+       let options = {
             container: $container,
-           url:'http://192.168.6.18:8080/live/nihao-12345.flv',
-           //   url:'http://192.168.6.18:8080/live/a123456.flv',
+            url:addrinput.value,
             delay:500,
             width:640,
             height:640,
-            renderMode:'normal'
+            renderMode:selectCtrl.options[selectCtrl.options.selectedIndex].value
+        };
+
+
+        player = new AVPlayer(options);
+
     };
-    let p = new AVPlayer(options);
+
+    document.getElementById("stop").onclick = () => {
+
+        console.log(`stop btn click`);
+
+        if (player) {
+
+            player.destroy();
+            player = undefined;
+        }
+
+    };
+  
 
 
     document.getElementById("unmute").onclick = () => {
 
         console.log(`unmute btn click`);
-        p.unMute();
 
-        document.getElementById("video").play();
+        if (player) {
 
+            player.unMute();
+        }
+    
     };
 
     document.getElementById("mute").onclick = () => {
 
-    console.log(`mute btn click`);
-    p.mute();
+        console.log(`mute btn click`);
 
-    document.getElementById("video").play();
+        if (player) {
+
+            player.mute();
+        }
 
     };
 
-    let selectCtrl = document.getElementById("rendermode");
-
+   
     selectCtrl.onchange = () => {
 
-        p.switchRender(selectCtrl.options[selectCtrl.options.selectedIndex].value);
+        if (player) {
+
+            player.switchRender(selectCtrl.options[selectCtrl.options.selectedIndex].value);
+        }
+
         console.log(`select ${selectCtrl.options[selectCtrl.options.selectedIndex].value}`);
     }
 
