@@ -95,11 +95,11 @@ class FLVDemuxer extends EventEmitter {
     _videoinfo;
     _audioinfo;
 
-    constructor(avplayer) {
+    constructor(player) {
 
         super();
 
-        this._avplayer = avplayer;
+        this._player = player;
 
         this.reset();
         
@@ -201,7 +201,7 @@ class FLVDemuxer extends EventEmitter {
                                  this._sps = obj.sps;
                                  this._pps = obj.pps;
 
-                                 this._avplayer._logger.info('FlvDemux', `parse sps:${this._sps[0]&0x1F} pps:${this._pps[0]&0x1F}`)
+                                 this._player._logger.info('FlvDemux', `parse sps:${this._sps[0]&0x1F} pps:${this._pps[0]&0x1F}`)
 
                                 //avcseq
                                 let info = readAVCSpecificConfig(remain.slice(0, this._needlen));
@@ -352,6 +352,7 @@ class FLVDemuxer extends EventEmitter {
     destroy() {
 
         this.off();
+        this._player._logger.info('FLVDemuxer', 'FLVDemuxer destroy');
     }
 
 

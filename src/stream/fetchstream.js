@@ -4,17 +4,17 @@ import EventEmitter from '../utils/events.js';
 
 class FetchStream extends EventEmitter {
 
-    _avplayer = undefined;
+    _player = undefined;
     _abort = undefined;
     _demuxer = undefined;
     _retryTimer = undefined;
     _retryCnt = 0;
 
-    constructor(avplayer, demuxer) {
+    constructor(player, demuxer) {
 
         super();
 
-        this._avplayer = avplayer;
+        this._player = player;
         this._demuxer = demuxer;
         this._abort = new AbortController();
 
@@ -25,10 +25,10 @@ class FetchStream extends EventEmitter {
 
         this._retryCnt++;
 
-        this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} start, Cnt ${this._retryCnt}`);
+        this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} start, Cnt ${this._retryCnt}`);
 
 
-        fetch(this._avplayer._options.url, {signal:this._abort.signal}).then((res) => {
+        fetch(this._player._options.url, {signal:this._abort.signal}).then((res) => {
             const reader = res.body.getReader();
             
             let fetchNext = async () => {
@@ -37,7 +37,7 @@ class FetchStream extends EventEmitter {
 
                 if (done) {
 
-                    this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} done, Cnt ${this._retryCnt}`);
+                    this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} done, Cnt ${this._retryCnt}`);
                     this.retry();
             
 
@@ -55,7 +55,7 @@ class FetchStream extends EventEmitter {
 
         }).catch((e) => {
 
-             this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} error ${e}, Cnt ${this._retryCnt}`);
+             this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} error ${e}, Cnt ${this._retryCnt}`);
 
             this.retry();
         });
@@ -67,23 +67,23 @@ class FetchStream extends EventEmitter {
 
         this.stop();
 
-        if (this._avplayer._options._retryCnt >= 0 && this._retryCnt > this.this._avplayer._options._retryCnt) {
+        if (this._player._options._retryCnt >= 0 && this._retryCnt > this.this._player._options._retryCnt) {
 
-            this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} finish because reach retryCnt, Cnt ${this._retryCnt} optionsCnt ${this._avplayer._options._retryCnt}`);
+            this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} finish because reach retryCnt, Cnt ${this._retryCnt} optionsCnt ${this._player._options._retryCnt}`);
            
             this.emit('finish');
             return;
         }
     
 
-        this._avplayer._logger.warn('FetchStream', `fetch url ${this._avplayer._options.url} retry, start retry timer delay ${this._avplayer._options.retryDelay} sec`);
+        this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} retry, start retry timer delay ${this._player._options.retryDelay} sec`);
         this._abort = new AbortController();
         this._demuxer.reset();
         this._retryTimer = setTimeout(() => {
             
             this.start();
 
-        }, this._avplayer._options.retryDelay*1000);
+        }, this._player._options.retryDelay*1000);
 
         this.emit('retry');
 
@@ -111,6 +111,7 @@ class FetchStream extends EventEmitter {
     destroy() {
         this.stop();
         this.off();
+        this._player._logger.info('FetchStream', 'FetchStream destroy');
     }
 
 

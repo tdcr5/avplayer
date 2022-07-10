@@ -4,9 +4,6 @@ import JitterBuffer from './jitterbuffer';
 
 
 
-
-
-
 class MediaCenter extends EventEmitter  {
 
 
@@ -123,6 +120,9 @@ class MediaCenter extends EventEmitter  {
 
         this.off();
         this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.destroy});
+
+
+        this._player._logger.info('MediaCenter', 'MediaCenter destroy');
  
     }
 

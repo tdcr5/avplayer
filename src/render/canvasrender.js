@@ -4,26 +4,26 @@ import WebGLRender from "./webglrender.js";
 
 class CanvasRender {
 
-    _avplayer;
+    _player;
 
     _webglrender;
 
-    constructor(avplayer) {
+    constructor(player) {
 
-        this._avplayer = avplayer;
+        this._player = player;
         
         let canvasElement = document.createElement("canvas");
         canvasElement.style.position = "absolute";
         canvasElement.style.top = '0px';
         canvasElement.style.left = '0px';
 
-        canvasElement.width = avplayer._options.width;
-        canvasElement.height = avplayer._options.height;
+        canvasElement.width = player._options.width;
+        canvasElement.height = player._options.height;
 
         this._videoElement = canvasElement;
-        avplayer._container.appendChild(this._videoElement);
+        player._container.appendChild(this._videoElement);
 
-        this._webglrender = new WebGLRender(avplayer, canvasElement)
+        this._webglrender = new WebGLRender(player, canvasElement)
 
     }
 
@@ -43,7 +43,9 @@ class CanvasRender {
     destroy() {
 
         this._webglrender.destroy();
-        this._avplayer._container.removeChild(this._videoElement);
+        this._player._container.removeChild(this._videoElement);
+
+        this._player._logger.info('CanvasRender', 'CanvasRender destroy');
 
     }
 

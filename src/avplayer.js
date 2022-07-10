@@ -209,6 +209,10 @@ class AVPlayer {
 
     destroy() {
 
+        if (this._stattimer) {
+            clearInterval(this._stattimer);
+        }
+
         this._stream.destroy();
         this._demuxer.destroy();
         this._mediacenter.destroy();

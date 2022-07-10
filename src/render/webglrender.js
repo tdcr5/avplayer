@@ -38,20 +38,20 @@ class WebGLRender {
     _gl;
 
     _render;
-    _avplayer;
+    _player;
 
     _renderMode;
     _width;
     _height;
 
-    constructor(avplayer, canvas) {
+    constructor(player, canvas) {
 
-        this._avplayer = avplayer;
+        this._player = player;
         this._gl = createContextGL(canvas);
         this._width = canvas.width;
         this._height = canvas.height;
 
-        this._renderMode = avplayer._options.renderMode;
+        this._renderMode = player._options.renderMode;
 
         this.createRender();
 
@@ -126,6 +126,8 @@ class WebGLRender {
             this._render.destroy();
             this._render = null
         }
+
+        this._player._logger.info('WebGLRender', 'WebGLRender destroy');
 
     }
 

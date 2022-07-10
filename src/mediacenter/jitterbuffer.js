@@ -71,6 +71,8 @@ class JitterBuffer extends EventEmitter {
         }
 
         this.off();
+
+        this._player._logger.info('JitterBuffer', 'JitterBuffer destroy');
     }
 
 
