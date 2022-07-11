@@ -6,16 +6,14 @@ class FetchStream extends EventEmitter {
 
     _player = undefined;
     _abort = undefined;
-    _demuxer = undefined;
     _retryTimer = undefined;
     _retryCnt = 0;
 
-    constructor(player, demuxer) {
+    constructor(player) {
 
         super();
 
         this._player = player;
-        this._demuxer = demuxer;
         this._abort = new AbortController();
 
 
@@ -43,7 +41,7 @@ class FetchStream extends EventEmitter {
 
                 } else {
 
-                    this._demuxer.dispatch(value);
+                    this.emit('data', value);
 
                     fetchNext();
                 }
@@ -78,7 +76,6 @@ class FetchStream extends EventEmitter {
 
         this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} retry, start retry timer delay ${this._player._options.retryDelay} sec`);
         this._abort = new AbortController();
-        this._demuxer.reset();
         this._retryTimer = setTimeout(() => {
             
             this.start();

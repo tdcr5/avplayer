@@ -2,8 +2,6 @@ import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE, AVType} from '../constant'
 import EventEmitter from '../utils/events.js';
 import JitterBuffer from './jitterbuffer';
 
-
-
 class MediaCenter extends EventEmitter  {
 
 
@@ -89,7 +87,6 @@ class MediaCenter extends EventEmitter  {
 
                 }
 
-
    
                 default: {
 
@@ -110,17 +107,10 @@ class MediaCenter extends EventEmitter  {
 
     }
 
-    reset() {
-
-        this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.reset});
-    }
-
-    
     destroy() {
 
         this.off();
         this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.destroy});
-
 
         this._player._logger.info('MediaCenter', 'MediaCenter destroy');
  
@@ -130,45 +120,6 @@ class MediaCenter extends EventEmitter  {
       
       return this._jitterBuffer.getPCMData(trust);
     }
-
-    setVideoCodec(vtype, extradata) {
-
-
-        this._mediacenterWorker.postMessage({
-                                            cmd: WORKER_SEND_TYPE.setVideoCodec,
-                                            vtype,
-                                            extradata}, [extradata.buffer]);
-    }
-
-    decodeVideo(videodata, timestamp, keyframe) {
-
-        this._mediacenterWorker.postMessage({
-                                                cmd: WORKER_SEND_TYPE.decodeVideo,
-                                                videodata,
-                                                timestamp,
-                                                keyframe
-                                             }, [videodata.buffer]);
-    }
-
-
-    setAudioCodec(atype, extradata) {
-
-        this._mediacenterWorker.postMessage({
-            cmd: WORKER_SEND_TYPE.setAudioCodec,
-            atype,
-            extradata}, [extradata.buffer]);
-
-    }
-
-    decodeAudio(audiodata, timestamp) {
-   
-        this._mediacenterWorker.postMessage({
-            cmd: WORKER_SEND_TYPE.decodeAudio,
-            audiodata,
-            timestamp,
-         }, [audiodata.buffer]);
-    }
-
 
 }
 

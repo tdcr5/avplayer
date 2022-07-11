@@ -156,6 +156,8 @@ VideoDecoder::~VideoDecoder() {
 
     clear();
 
+    printf("VideoDecoder dealloc \n");
+
 }
 
 void VideoDecoder::clear() {
@@ -370,6 +372,8 @@ void AudioDecoder::clear() {
 AudioDecoder::~AudioDecoder() {
 
     clear();
+
+    printf("AudioDecoder dealloc \n");
 }
 
 void AudioDecoder::setCodec(u32 atype, string extra)
