@@ -63,7 +63,7 @@ const baseConfig = {
         copy({
             targets: [
                 {
-                    src: "src/decoder/decoder.wasm",
+                    src: "src/decoder/decoder_ffmpeg.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
                 }
             ]

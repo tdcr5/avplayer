@@ -28,7 +28,7 @@
 
         先进入容器
         cd wasm
-        python3 make.py
+        python3 make_use_ffmpeg.py
 
 # 工程打包
    
@@ -45,11 +45,11 @@
 
     基于nginx镜像构建
 
-    docker build -f Dockerfile -t tdcr5/avplayer:0.4.0 .
-    docker push tdcr5/avplayer:0.4.0
+    docker build -f Dockerfile -t tdcr5/avplayer:0.5.0 .
+    docker push tdcr5/avplayer:0.5.0
 
 
 
 # 运行docker image
 
-docker run --name avplayer -itd -p 9080:80 tdcr5/avplayer:0.4.0
+docker run --name avplayer -itd -p 9080:80 tdcr5/avplayer:0.5.0

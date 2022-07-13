@@ -6,7 +6,7 @@ import os
 import sys
 import getopt
 from subprocess import Popen, PIPE, STDOUT
-args = {'-o': '../src/decoder/decoder'}
+args = {'-o': '../src/decoder/decoder_ffmpeg'}
 
 sargs = {
     'WASM': 1,
@@ -24,15 +24,15 @@ emcc_args = [
     # '--closure', '1',
     # '--llvm-lto','1',
     '--bind',
-    '-I.', '-Iobj/include',
+    '-I.', '-Ithirdparty/ffmpeg/include',
     '--post-js','./post.js'
 ]+["-s "+k+"="+str(v) for k, v in sargs.items()]
 
 print ('building...')
 
-emcc_args = ['obj/lib/libavcodec.a','obj/lib/libavutil.a','obj/lib/libswresample.a']+emcc_args
+emcc_args = ['thirdparty/ffmpeg/lib/libavcodec.a','thirdparty/ffmpeg/lib/libavutil.a','thirdparty/ffmpeg/lib/libswresample.a']+emcc_args
 
-os.system('emcc ./decoder.cpp ' +
+os.system('emcc ./src/use_ffmpeg_codec/decoder.cpp ' +
           (' '.join(emcc_args)) + ' -o '+args['-o']+'.js')
 
 print ('done')

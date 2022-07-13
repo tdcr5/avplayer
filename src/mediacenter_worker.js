@@ -1,4 +1,4 @@
-import Module from './decoder/decoder'
+import Module from './decoder/decoder_ffmpeg'
 import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE} from './constant'
 import { AVPacket } from './utils/av';
 import { AVType } from './constant';

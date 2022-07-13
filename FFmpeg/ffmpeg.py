@@ -8,14 +8,14 @@ args = [
     'cxx=em++',
     'ar=emar',
     'ranlib=emranlib',
-    'prefix=../wasm/obj',
+    'prefix=../wasm/thirdparty/ffmpeg',
     'target-os=none',
     'arch=x86_64',
     'cpu=generic'
     ]
 disables = [
     'everything','all','avdevice','postproc','avfilter','programs','asm','parsers','muxers','demuxers','filters',
-    'doc','devices','network','bsfs','shared','hwaccels','debug','protocols','indevs','outdevs','runtime-cpudetect','pthreads'
+    'doc','devices','network','bsfs','shared','hwaccels','debug','protocols','indevs','outdevs','runtime-cpudetect'
 ]
 enables = [
     'small','cross-compile','gpl','avcodec','swresample','ffmpeg','avformat',

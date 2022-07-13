@@ -1,7 +1,7 @@
-prefix=../wasm/obj
+prefix=../wasm/thirdparty/ffmpeg
 exec_prefix=${prefix}
-libdir=../wasm/obj/lib
-includedir=../wasm/obj/include
+libdir=../wasm/thirdparty/ffmpeg/lib
+includedir=../wasm/thirdparty/ffmpeg/include
 
 Name: libavutil
 Description: FFmpeg utility library
@@ -9,6 +9,6 @@ Version: 56.70.100
 Requires: 
 Requires.private: 
 Conflicts:
-Libs: -L${libdir}  -lavutil -lm
+Libs: -L${libdir}  -lavutil -pthread -lm
 Libs.private: 
 Cflags: -I${includedir}

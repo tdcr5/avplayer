@@ -14,7 +14,7 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var decoder = createCommonjsModule(function (module) {
+	var decoder_ffmpeg = createCommonjsModule(function (module) {
 	  var Module = typeof Module != "undefined" ? Module : {};
 	  var moduleOverrides = Object.assign({}, Module);
 	  var thisProgram = "./this.program";
@@ -516,7 +516,7 @@
 	  }
 
 	  var wasmBinaryFile;
-	  wasmBinaryFile = "decoder.wasm";
+	  wasmBinaryFile = "decoder_ffmpeg.wasm";
 
 	  if (!isDataURI(wasmBinaryFile)) {
 	    wasmBinaryFile = locateFile(wasmBinaryFile);
@@ -576,10 +576,10 @@
 	    function receiveInstance(instance, module) {
 	      var exports = instance.exports;
 	      Module["asm"] = exports;
-	      wasmMemory = Module["asm"]["C"];
+	      wasmMemory = Module["asm"]["D"];
 	      updateGlobalBufferAndViews(wasmMemory.buffer);
-	      wasmTable = Module["asm"]["G"];
-	      addOnInit(Module["asm"]["D"]);
+	      wasmTable = Module["asm"]["H"];
+	      addOnInit(Module["asm"]["E"]);
 	      removeRunDependency();
 	    }
 
@@ -5077,6 +5077,14 @@
 	    abort("");
 	  }
 
+	  function getHeapMax() {
+	    return HEAPU8.length;
+	  }
+
+	  function _emscripten_get_heap_max() {
+	    return getHeapMax();
+	  }
+
 	  function abortOnCannotGrowMemory(requestedSize) {
 	    abort("OOM");
 	  }
@@ -5309,14 +5317,14 @@
 	  }
 
 	  var asmLibraryArg = {
-	    "z": ___syscall_fcntl64,
-	    "u": ___syscall_openat,
+	    "A": ___syscall_fcntl64,
+	    "v": ___syscall_openat,
 	    "s": __embind_register_bigint,
 	    "p": __embind_register_bool,
 	    "o": __embind_register_class,
 	    "j": __embind_register_class_constructor,
 	    "d": __embind_register_class_function,
-	    "A": __embind_register_emval,
+	    "B": __embind_register_emval,
 	    "n": __embind_register_float,
 	    "c": __embind_register_integer,
 	    "b": __embind_register_memory_view,
@@ -5325,15 +5333,16 @@
 	    "q": __embind_register_void,
 	    "h": __emscripten_date_now,
 	    "g": __emval_call_void_method,
-	    "B": __emval_decref,
+	    "C": __emval_decref,
 	    "e": __emval_get_method_caller,
 	    "a": _abort,
+	    "u": _emscripten_get_heap_max,
 	    "t": _emscripten_resize_heap,
-	    "w": _environ_get,
-	    "x": _environ_sizes_get,
+	    "x": _environ_get,
+	    "y": _environ_sizes_get,
 	    "l": _fd_close,
-	    "v": _fd_fdstat_get,
-	    "y": _fd_read,
+	    "w": _fd_fdstat_get,
+	    "z": _fd_read,
 	    "r": _fd_seek,
 	    "k": _fd_write,
 	    "f": _setTempRet0
@@ -5341,50 +5350,50 @@
 	  createWasm();
 
 	  Module["___wasm_call_ctors"] = function () {
-	    return (Module["___wasm_call_ctors"] = Module["asm"]["D"]).apply(null, arguments);
+	    return (Module["___wasm_call_ctors"] = Module["asm"]["E"]).apply(null, arguments);
 	  };
 
 	  var _free = Module["_free"] = function () {
-	    return (_free = Module["_free"] = Module["asm"]["E"]).apply(null, arguments);
+	    return (_free = Module["_free"] = Module["asm"]["F"]).apply(null, arguments);
 	  };
 
 	  var _malloc = Module["_malloc"] = function () {
-	    return (_malloc = Module["_malloc"] = Module["asm"]["F"]).apply(null, arguments);
+	    return (_malloc = Module["_malloc"] = Module["asm"]["G"]).apply(null, arguments);
 	  };
 
 	  var ___errno_location = Module["___errno_location"] = function () {
-	    return (___errno_location = Module["___errno_location"] = Module["asm"]["H"]).apply(null, arguments);
+	    return (___errno_location = Module["___errno_location"] = Module["asm"]["I"]).apply(null, arguments);
 	  };
 
 	  var ___getTypeName = Module["___getTypeName"] = function () {
-	    return (___getTypeName = Module["___getTypeName"] = Module["asm"]["I"]).apply(null, arguments);
+	    return (___getTypeName = Module["___getTypeName"] = Module["asm"]["J"]).apply(null, arguments);
 	  };
 
 	  Module["___embind_register_native_and_builtin_types"] = function () {
-	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["J"]).apply(null, arguments);
+	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["K"]).apply(null, arguments);
 	  };
 
 	  var _emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = function () {
-	    return (_emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = Module["asm"]["K"]).apply(null, arguments);
+	    return (_emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = Module["asm"]["L"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_viiijj"] = function () {
-	    return (Module["dynCall_viiijj"] = Module["asm"]["L"]).apply(null, arguments);
+	    return (Module["dynCall_viiijj"] = Module["asm"]["M"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jij"] = function () {
-	    return (Module["dynCall_jij"] = Module["asm"]["M"]).apply(null, arguments);
+	    return (Module["dynCall_jij"] = Module["asm"]["N"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jii"] = function () {
-	    return (Module["dynCall_jii"] = Module["asm"]["N"]).apply(null, arguments);
+	    return (Module["dynCall_jii"] = Module["asm"]["O"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jiji"] = function () {
-	    return (Module["dynCall_jiji"] = Module["asm"]["O"]).apply(null, arguments);
+	    return (Module["dynCall_jiji"] = Module["asm"]["P"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 116364;
+	  Module["_ff_h264_cabac_tables"] = 117797;
 
 	  var calledRun;
 
@@ -6595,8 +6604,8 @@
 	  _lastts = 0;
 
 	  constructor(options) {
-	    this._vDecoder = new decoder.VideoDecoder(this);
-	    this._aDecoder = new decoder.AudioDecoder(this);
+	    this._vDecoder = new decoder_ffmpeg.VideoDecoder(this);
+	    this._aDecoder = new decoder_ffmpeg.AudioDecoder(this);
 	    this._options = options;
 	    this._logger = new Logger();
 
@@ -6795,7 +6804,7 @@
 
 	    this._lastts = timestamp;
 	    let size = this._width * this._height * 3 / 2;
-	    let out = decoder.HEAPU8.subarray(yuv, yuv + size);
+	    let out = decoder_ffmpeg.HEAPU8.subarray(yuv, yuv + size);
 	    let data = Uint8Array.from(out);
 	    this._yuvframerate++;
 	    this._yuvbitrate += data.length;
@@ -6833,8 +6842,8 @@
 	    this._pcmframerate++;
 
 	    for (let i = 0; i < this._channels; i++) {
-	      var fp = decoder.HEAPU32[(pcmDataArray >> 2) + i] >> 2;
-	      datas.push(Float32Array.of(...decoder.HEAPF32.subarray(fp, fp + samples)));
+	      var fp = decoder_ffmpeg.HEAPU32[(pcmDataArray >> 2) + i] >> 2;
+	      datas.push(Float32Array.of(...decoder_ffmpeg.HEAPF32.subarray(fp, fp + samples)));
 	      this._yuvbitrate += datas[i].length * 4;
 	    }
 
@@ -6865,15 +6874,15 @@
 
 	}
 
-	decoder.print = function (text) {
+	decoder_ffmpeg.print = function (text) {
 	  console.log(`wasm print msg: ${text}`);
 	};
 
-	decoder.printErr = function (text) {
+	decoder_ffmpeg.printErr = function (text) {
 	  console.log(`wasm print error msg: ${text}`);
 	};
 
-	decoder.postRun = function () {
+	decoder_ffmpeg.postRun = function () {
 	  console.log('avplayer: mediacenter worker start');
 	  let mcinternal = undefined; //recv msg from main thread
 
