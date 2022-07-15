@@ -218,11 +218,11 @@ class FLVDemuxer extends EventEmitter {
                                 let vframe = remain.slice(5, this._needlen);
 
                                 let packet = new AVPacket();
-                                packet.payload = vframe;
+                                packet.payload = convertAVCCtoAnnexB(vframe);;
                                 packet.iskeyframe = true;
                                 packet.timestamp = this._pts;
                                 packet.avtype = AVType.Video;
-                                packet.nals = SplitBufferToNals(vframe);
+                               // packet.nals = SplitBufferToNals(vframe);
             
                                 this.emit('videodata', packet);
 

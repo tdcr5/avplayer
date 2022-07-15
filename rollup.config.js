@@ -65,6 +65,10 @@ const baseConfig = {
                 {
                     src: "src/decoder/decoder_ffmpeg.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
+                },
+                {
+                    src: "src/decoder/decoder_android_simd.wasm",
+                    dest: isProd ? 'dist' : 'demo/public'
                 }
             ]
         })

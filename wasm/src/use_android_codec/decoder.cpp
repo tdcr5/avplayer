@@ -4,14 +4,18 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "decoderavc.h"
+
 using namespace emscripten;
 using namespace std;
 typedef unsigned char u8;
 typedef unsigned int u32;
 
+
+
 extern "C"
 {
-
+    
 }
 
 
@@ -38,63 +42,19 @@ enum AudioType {
 };
 
 
-class Decoder {
 
-public:
-    val mJsObject;
-
-    bool mInit = false;
-
-public:
-
-    Decoder(val&& v);
-    virtual ~Decoder();
-
-    void initCodec(enum AVCodecID codecID);
-    virtual void clear();
-    void decode(u8* buffer, u32 bufferLen, u32 timestamp);
-
-    virtual void frameReady(u32 timestamp) {};
-
-};
-
-Decoder::Decoder(val&& v) : mJsObject(move(v)) {
-  
-}
-
-Decoder::~Decoder() {
-    clear();
-}
-
-void Decoder::initCodec(enum AVCodecID codecID) {
-    
-    if (mInit) {
-
-        return;
-    }
-
-}
-
-void Decoder::clear() {
-
-    mInit = false;
-}
-
-void Decoder::decode(u8* buffer, u32 bufferLen, u32 timestamp) {
-
-
-}
-
-
-class VideoDecoder : public Decoder {
+class VideoDecoder : public DecoderVideoObserver {
 
 public:
 
     int mVideoWith = 0;
     int mVideoHeight = 0;
     int mVType = 0;
+    DecoderVideo* mDecoderV;
 
-    u8* mYUV = nullptr;
+
+    val mJsObject;
+    bool mInit = false;
 
 public:
 
@@ -105,13 +65,15 @@ public:
 
     void decode(string input, u32 timestamp);
 
-    virtual void clear();
-    virtual void frameReady(u32 timestamp);
+    virtual void videoInfo(int width, int height);
+    virtual void yuvData(unsigned char* yuv, unsigned int timestamp);
+
+    void clear();
 
 };
 
 
-VideoDecoder::VideoDecoder(val&& v) : Decoder(move(v)) {
+VideoDecoder::VideoDecoder(val&& v) : mJsObject(move(v)) {
   
 }
 
@@ -125,39 +87,35 @@ VideoDecoder::~VideoDecoder() {
 
 void VideoDecoder::clear() {
 
-    if (mYUV) {
-        free(mYUV);
-        mYUV = nullptr;
-    }
-
     mVideoWith = 0;
     mVideoHeight = 0;
+    
+    if (mDecoderV) {
+        delete mDecoderV;
+        mDecoderV = nullptr;
+    }
 
-    Decoder::clear();
 }
 
 void VideoDecoder::setCodec(u32 vtype, string extra)
 {
 
-    printf("VideoDecoder::setCodec vtype %d, extra %d \n", vtype, extra.length());
+    printf("SIMD VideoDecoder::setCodec vtype %d, extra %d \n", vtype, extra.length());
     
-  
     clear();
-
-    enum AVCodecID codecID;
 
     switch (vtype)
     {
         case Video_H264: {
 
-            codecID = AV_CODEC_ID_H264;
+            mDecoderV = new DecoderAVC(this);
 
             break;
         }
 
         case Video_H265: {
 
-            codecID = AV_CODEC_ID_HEVC;
+
             break;
         }
     
@@ -169,11 +127,8 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
 
     mVType = vtype;
 
-
-    Decoder::initCodec(codecID);
+    mDecoderV->init();
     
-
-
     mInit = true;
 }
 
@@ -181,7 +136,7 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
 void  VideoDecoder::decode(string input, u32 timestamp)
 {
 
-  //   printf("VideoDecoder::decode input %d, timestamp %d \n", input.length(), timestamp);
+     
 
     if (!mInit) {
 
@@ -192,45 +147,41 @@ void  VideoDecoder::decode(string input, u32 timestamp)
     u32 bufferLen = input.length();
     u8* buffer = (u8*)input.data();
 
-    Decoder::decode(buffer, bufferLen, timestamp);
+   // printf("SIMD VideoDecoder::decode input %d, timestamp %d \n", bufferLen, timestamp);
+
+    mDecoderV->decode(buffer, bufferLen, timestamp);
+
+
 
 }
 
-void  VideoDecoder::frameReady(u32 timestamp) {
+void VideoDecoder::videoInfo(int width, int height){
 
-    if (mVideoWith != mFrame->width || mVideoHeight != mFrame->height) {
+    mVideoWith = width;
+    mVideoHeight = height;
 
-        mVideoWith = mFrame->width;
-        mVideoHeight = mFrame->height;
+    mJsObject.call<void>("videoInfo", mVType, mVideoWith, mVideoHeight);
+}
 
-        mJsObject.call<void>("videoInfo", mVType, mVideoWith, mVideoHeight);
+void VideoDecoder::yuvData(unsigned char* yuv, unsigned int timestamp) {
 
-        if (mYUV) {
-            free(mYUV);
-        }
-            
-       
-        mYUV = (u8*)malloc(mVideoWith * mVideoHeight * 3 /2);
-    }
-
-   
-
-    mJsObject.call<void>("yuvData", (u32)mYUV, timestamp);
+    mJsObject.call<void>("yuvData", (u32)yuv, timestamp);
 
 }
 
 
-class AudioDecoder : public Decoder {
+
+class AudioDecoder  {
 
 public:
 
-    enum AVSampleFormat mAudioFormat;
 
-    SwrContext *mConvertCtx = nullptr;
-    u8 *mOutBuffer[2];
 
     bool mNotifyAudioParam;
     int mAVType;
+
+    val mJsObject;
+    bool mInit = false;
 
 
 public:
@@ -241,19 +192,15 @@ public:
     void setCodec(u32 atype, string extra);
 
     void decode(string input, u32 timestamp);
-    virtual void clear();
-    virtual void frameReady(u32 timestamp) ;
+    void clear();
 
 };
 
 
-AudioDecoder::AudioDecoder(val&& v) : Decoder(move(v)) {
+AudioDecoder::AudioDecoder(val&& v) : mJsObject(move(v)) {
     
     //指定输出fltp raw 流，其他 采样率，通道数，位深 保持不变
 
-
-    mOutBuffer[0] = nullptr;
-    mOutBuffer[1] = nullptr;
 
     mNotifyAudioParam = false;
 }
@@ -261,17 +208,9 @@ AudioDecoder::AudioDecoder(val&& v) : Decoder(move(v)) {
 
 void AudioDecoder::clear() {
 
-
         
-    if (mOutBuffer[0]) {
-        free(mOutBuffer[0]);
-        mOutBuffer[0] = nullptr;
-    }
-
-    mOutBuffer[1] = nullptr;
     mNotifyAudioParam = false;
 
-    Decoder::clear();
 }
 
 
@@ -330,23 +269,10 @@ void  AudioDecoder::decode(string input, u32 timestamp)
     u32 bufferLen = input.length();
     u8* buffer = (u8*)input.data();
 
-    Decoder::decode(buffer, bufferLen, timestamp);
+ 
 
 }
 
-void  AudioDecoder::frameReady(u32 timestamp)  {
-
-    auto nb_samples = mFrame->nb_samples;
-
-
-    if (!mNotifyAudioParam) {
-
-        mJsObject.call<void>("audioInfo", mAVType, mFrame->sample_rate, mFrame->channels);
-        mNotifyAudioParam = true;
-    }
-
-
-}
 
 
 

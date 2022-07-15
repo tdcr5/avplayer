@@ -65,16 +65,13 @@ void aslog(LOG_LEVEL level, const char* format, ...) {
     va_end(args);
 
     if(iscopy) {
-        if(logbuf[l-1] != '\n')
+        
+        if(logbuf[l-1] != '\n') {
             logbuf[l++] = '\n';
+        }
+            
         logbuf[l] = '\0';
-#if defined(__ANDROID__)
-#elif defined(__APPLE__)
-#elif defined(_WIN32)
-#elif defined(__EMSCRIPTEN__)
-       em_log(logbuf);
-#else
+//em_log(logbuf);
         printf("%s", logbuf);
-#endif
     }
 }

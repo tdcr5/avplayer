@@ -220,6 +220,10 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
 
     avcodec_open2(mDecCtx, mCodec, NULL);
 
+    
+
+    printf("avcodec_open2 width=%d height=%d \n", mDecCtx->width, mDecCtx->height);
+
     mInit = true;
 }
 
