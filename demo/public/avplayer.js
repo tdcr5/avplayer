@@ -2245,7 +2245,7 @@ void main(void) {
       }
 
       playVideoOnly() {
-        changeStrategy(DispatchStrategy.playVideoOnlyDriven);
+        this.changeStrategy(DispatchStrategy.playVideoOnlyDriven);
       }
 
       playVideoTicket() {
@@ -2265,7 +2265,8 @@ void main(void) {
           return;
         }
 
-        yuvpacket = this._vgop.shift();
+        let yuvpacket = this._vgop.shift();
+
         this.emit('yuvdata', yuvpacket);
         this.updateJitterBufferState();
       }
@@ -2294,7 +2295,7 @@ void main(void) {
             clearInterval(this._playTimer);
           }
 
-          let sec = 25;
+          let sec = 40;
           this._playTimer = setInterval(() => {
             this.playVideoTicket();
           }, sec);
@@ -2540,6 +2541,9 @@ void main(void) {
             case WORKER_EVENT_TYPE.videoInfo:
               {
                 this.emit('videoinfo', msg.vtype, msg.width, msg.height);
+
+                this._jitterBuffer.playVideoOnly();
+
                 break;
               }
 

@@ -3,6 +3,8 @@
 
 #include "decodervideo.h"
 
+class AVCCodec;
+
 class DecoderAVC : public DecoderVideo
 {
 
@@ -12,6 +14,8 @@ class DecoderAVC : public DecoderVideo
          int      mVideoWith;          
          int      mVideoHeight;
          unsigned char* mYUV;
+       
+        AVCCodec* mCodec;
 
 
     public:
@@ -20,12 +24,6 @@ class DecoderAVC : public DecoderVideo
 
         virtual void init();
         virtual void decode(unsigned char *buf, unsigned int buflen, unsigned int timestamp);
-
-        void setNumCores(int nNumCores);
-        void setProcessor();
-        void logVersion();
-
-
         virtual ~DecoderAVC();
 };
 

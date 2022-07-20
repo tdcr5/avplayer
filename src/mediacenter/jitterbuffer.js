@@ -78,7 +78,7 @@ class JitterBuffer extends EventEmitter {
 
     playVideoOnly() {
 
-        changeStrategy(DispatchStrategy.playVideoOnlyDriven);
+        this.changeStrategy(DispatchStrategy.playVideoOnlyDriven);
     }
 
 
@@ -101,7 +101,7 @@ class JitterBuffer extends EventEmitter {
             return;
         }
 
-        yuvpacket = this._vgop.shift();
+        let yuvpacket = this._vgop.shift();
  
         this.emit('yuvdata', yuvpacket);
 
@@ -137,7 +137,7 @@ class JitterBuffer extends EventEmitter {
                 clearInterval(this._playTimer);
             }
 
-            let sec = 25;
+            let sec = 40;
 
             this._playTimer = setInterval(() => {
 

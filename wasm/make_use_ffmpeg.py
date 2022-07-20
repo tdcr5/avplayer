@@ -10,7 +10,7 @@ args = {'-o': '../src/decoder/decoder_ffmpeg'}
 
 sargs = {
     'WASM': 1,
-    'TOTAL_MEMORY': 67108864,
+    'TOTAL_MEMORY': 67108864*8,
     'ASSERTIONS': 0,
     'ERROR_ON_UNDEFINED_SYMBOLS': 0,
     'DISABLE_EXCEPTION_CATCHING': 1,

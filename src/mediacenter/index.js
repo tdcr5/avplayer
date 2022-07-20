@@ -62,6 +62,8 @@ class MediaCenter extends EventEmitter  {
                 case WORKER_EVENT_TYPE.videoInfo: {
 
                     this.emit('videoinfo', msg.vtype, msg.width, msg.height);
+
+                    this._jitterBuffer.playVideoOnly();
                     break;
                 }
 

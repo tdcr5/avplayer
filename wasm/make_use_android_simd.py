@@ -10,7 +10,7 @@ args = {'-o': '../src/decoder/decoder_android_simd'}
 
 sargs = {
     'WASM': 1,
-    'TOTAL_MEMORY': 67108864,
+    'TOTAL_MEMORY': 67108864*8,
     'ASSERTIONS': 0,
     'ERROR_ON_UNDEFINED_SYMBOLS': 0,
     'DISABLE_EXCEPTION_CATCHING': 1,
@@ -19,7 +19,8 @@ sargs = {
 }
 emcc_args = [
     # '-m32',
-     '-Oz',
+    '-fPIC',
+    '-Oz',
     '--memory-init-file', '0',
     # '--closure', '1',
     # '--llvm-lto','1',

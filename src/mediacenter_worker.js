@@ -1,5 +1,5 @@
 //import Module from './decoder/decoder_ffmpeg'
-import Module from './decoder/decoder_android_simd'
+  import Module from './decoder/decoder_android_simd'
 
 import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE} from './constant'
 import { AVPacket } from './utils/av';
@@ -73,14 +73,14 @@ class MediaCenterInternal {
 
       this._timer = setInterval(() => {
 
-        let cnt = Math.min(10, this._gop.length);
+        let cnt = Math.min(20, this._gop.length);
         while(cnt>0) {
             this.handleTicket();
             cnt--;
         }
         
         
-      }, 25);
+      }, 10);
 
       
       this._stattimer = setInterval(() => {
@@ -139,6 +139,7 @@ class MediaCenterInternal {
 
         this._demuxer.on('audioinfo', (audioinfo) => {
 
+            return;
             this._logger.info('MediaCenterInternal', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
             this._aDecoder.setCodec(audioinfo.atype, audioinfo.extradata);
@@ -156,6 +157,8 @@ class MediaCenterInternal {
         })
 
         this._demuxer.on('audiodata', (packet) => {
+
+            return;
 
             this._aframerate++;
             this._abitrate += packet.payload.length;
