@@ -27,24 +27,33 @@
 
         先进入emcc容器
         cd wasm
-        python3 make_use_ffmpeg.py
+        python3 make_decoder.py
 
  # 编译支持SIMD解码wasm ，使用android的解码库
 
-    (1) libavc（h264），从google android下载代码（在android的工程的external里），使用分支 android-mainline-12.0.0_r126 （在原有的CMakeLists.txt上加入编译项 -c -Oz -fPIC -msimd128）
+    (1) libavc（h264），从google android下载代码（在android的工程的external里），使用分支 android-mainline-12.0.0_r126 （在原有的CMakeLists.txt上加入编译项 -c -Oz -fPIC -msimd128）, 本工程里的代码已经配置好了
 
-        先进入emcc容器(这部分同ffmpeg)
-        cd libavc
+        先进入emcc容器
+        cd Android/libavc
         mkdir build
         cd build
         emcmake cmake ..
         emmake make       
 
-    (2) 编译SIMD decoder wasm库 
+    (2) libhevc（h265），从google android下载代码（在android的工程的external里），使用分支 android-mainline-12.0.0_r126 （在原有的 CMakeLists.txt上加入编译项 -c -Oz -fPIC -msimd128）, 本工程里的代码已经配置好了
+
+        先进入emcc容器
+        cd Android/libhevc
+        mkdir build
+        cd build
+        emcmake cmake ..
+        emmake make    
+
+    (3) 编译SIMD decoder wasm库 
 
         先进入emcc容器
         cd wasm
-        python3 make_use_android_simd.py
+        python3 make_decoder_simd.py
 
 # 工程打包
    
@@ -57,7 +66,7 @@
     demo/public 目录下，使用 Live Server (VSCode的用于调试html的插件) 打开 demo.html
 
 
-# 编译docker image
+# Demo H5编译docker image
 
     基于nginx镜像构建
 
