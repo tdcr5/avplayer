@@ -19,7 +19,8 @@ const DEFAULT_PLAYER_OPTIONS = {
     retryCnt:-1,       //拉流失败重试次数
     retryDelay: 5,     //重试时延 5000
 
-    decoder:'decoder.js',    //work线程的js文件
+    decoder:'worker.js',    //work线程的js文件
+    decoderMode:"normal"
 }
 
 class AVPlayer {

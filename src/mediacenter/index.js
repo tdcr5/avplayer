@@ -17,8 +17,8 @@ class MediaCenter extends EventEmitter  {
         this._player = player;
 
         this._player._logger.info('mediacenter', `start worker thread ${player._options.decoder}`);
-        this._mediacenterWorker = new Worker(player._options.decoder);
 
+        this._mediacenterWorker = new Worker(player._options.decoder, {name:player._options.decoderMode});
 
         this._mediacenterWorker.onmessageerror = (event) => {
 
@@ -63,7 +63,7 @@ class MediaCenter extends EventEmitter  {
 
                     this.emit('videoinfo', msg.vtype, msg.width, msg.height);
 
-                    this._jitterBuffer.playVideoOnly();
+                   // this._jitterBuffer.playVideoOnly();
                     break;
                 }
 

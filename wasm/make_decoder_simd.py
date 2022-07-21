@@ -6,7 +6,7 @@ import os
 import sys
 import getopt
 from subprocess import Popen, PIPE, STDOUT
-args = {'-o': '../src/decoder/decoder_android_simd'}
+args = {'-o': '../src/decoder/decoder_simd'}
 
 sargs = {
     'WASM': 1,
@@ -19,22 +19,22 @@ sargs = {
 }
 emcc_args = [
     # '-m32',
-    '-fPIC',
-    '-Oz',
+    # '-fPIC',
+    # '-Oz',
     '--memory-init-file', '0',
     # '--closure', '1',
     # '--llvm-lto','1',
     '--bind',
-    '-I.', '-Ithirdparty/android', '-Ithirdparty/android/include',
+    '-I.', '-Ithirdparty/android', '-Ithirdparty/android/include', '-Ithirdparty/ffmpeg/include',
     '--post-js','./post.js',
     '-msimd128'
 ]+["-s "+k+"="+str(v) for k, v in sargs.items()]
 
 print ('building...')
 
-emcc_args = ['thirdparty/android/libs/libavcdec-simd.a', 'thirdparty/android/libs/libhevcdec-simd.a']+emcc_args
+emcc_args = ['thirdparty/android/libs/libavcdec-simd.a', 'thirdparty/android/libs/libhevcdec-simd.a', 'thirdparty/ffmpeg/lib/libavcodec.a','thirdparty/ffmpeg/lib/libavutil.a','thirdparty/ffmpeg/lib/libswresample.a']+emcc_args
 
-os.system('emcc ./src/use_android_codec/decoder.cpp ./thirdparty/android/log.c ./thirdparty/android/deocdervideo.cpp ./thirdparty/android/decoderavc.cpp ./thirdparty/android/decoderhevc.cpp ' +
+os.system('emcc ./src/decoder_simd/decoder.cpp ./thirdparty/android/log.c ./thirdparty/android/deocdervideo.cpp ./thirdparty/android/decoderavc.cpp ./thirdparty/android/decoderhevc.cpp ' +
           (' '.join(emcc_args)) + ' -o '+args['-o']+'.js')
 
 print ('done')

@@ -12,10 +12,14 @@
         <button id="unmute" type="button">打开声音</button>
         <button id="mute" type="button">关闭声音</button>
         <select id="rendermode">
-            <option value="normal">正常</option>
+            <option value="normal">正常渲染</option>
             <option value="mask">掩码抠图</option>
             <option value="green">绿幕抠图</option>
             <option value="cube">立方体</option>
+        </select>
+        <select id="decodermode">
+            <option value="normal">正常解码</option>
+            <option value="simd">支持SIMD解码</option>
         </select>
         <input id="address" type="text" style="width: 300px;"value="http://192.168.6.18:8080/live/a123456.flv" />
         <button id="play" type="button">播放</button>
@@ -39,13 +43,14 @@ function main() {
     let $container = document.getElementById('container');
     let selectCtrl = document.getElementById("rendermode");
     let addrinput = document.getElementById("address");
+    let decoderCtrl = document.getElementById("decodermode");
 
 
     let player = undefined;
     
     document.getElementById("play").onclick = () => {
 
-        console.log(`play btn click`);
+        console.log(`play btn click rendmode ${selectCtrl.options[selectCtrl.options.selectedIndex].value} decoderMode ${decoderCtrl.options[decoderCtrl.options.selectedIndex].value}`);
 
        document.getElementById("video").play();
 
@@ -54,6 +59,8 @@ function main() {
             player.destroy();
        }
 
+
+
        let options = {
             container: $container,
             url:addrinput.value,
@@ -61,8 +68,8 @@ function main() {
             width:540,
             height:960,
             renderMode:selectCtrl.options[selectCtrl.options.selectedIndex].value,
+            decoderMode:decoderCtrl.options[decoderCtrl.options.selectedIndex].value
         };
-
 
         player = new AVPlayer(options);
 

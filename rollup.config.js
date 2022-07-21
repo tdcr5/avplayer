@@ -63,11 +63,11 @@ const baseConfig = {
         copy({
             targets: [
                 {
-                    src: "src/decoder/decoder_ffmpeg.wasm",
+                    src: "src/decoder/decoder.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
                 },
                 {
-                    src: "src/decoder/decoder_android_simd.wasm",
+                    src: "src/decoder/decoder_simd.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
                 }
             ]
@@ -103,8 +103,8 @@ export default [
     {
         input: 'src/mediacenter_worker.js',
         output: {
-            name: 'decoder',
-            file: isProd ? 'dist/decoder.js' : 'demo/public/decoder.js',
+            name: 'worker',
+            file: isProd ? 'dist/worker.js' : 'demo/public/worker.js',
         },
         plugins: []
     }

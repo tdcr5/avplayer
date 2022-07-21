@@ -1,7 +1,22 @@
-//import Module from './decoder/decoder_ffmpeg'
-  import Module from './decoder/decoder_android_simd'
 
-import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE} from './constant'
+import decModule from './decoder/decoder'
+import decSIMDModule from './decoder/decoder_simd'
+
+let Module = undefined;
+
+console.log(`WorkName ${self.name}`);
+
+if (self.name === 'simd'){
+
+    Module = decSIMDModule;
+ 
+} else {
+
+    Module = decModule;
+}
+
+
+import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE} from './constant';
 import { AVPacket } from './utils/av';
 import { AVType } from './constant';
 import SpliteBuffer from './utils/splitebuffer';
@@ -139,7 +154,6 @@ class MediaCenterInternal {
 
         this._demuxer.on('audioinfo', (audioinfo) => {
 
-            return;
             this._logger.info('MediaCenterInternal', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
             this._aDecoder.setCodec(audioinfo.atype, audioinfo.extradata);
@@ -158,7 +172,6 @@ class MediaCenterInternal {
 
         this._demuxer.on('audiodata', (packet) => {
 
-            return;
 
             this._aframerate++;
             this._abitrate += packet.payload.length;

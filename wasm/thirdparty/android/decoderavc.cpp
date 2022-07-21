@@ -388,9 +388,9 @@ void DecoderAVC::decode(unsigned char *buf, unsigned int buflen, unsigned int ti
         IV_API_CALL_STATUS_T ret;
         size_t bytesConsumed;
 
-        struct timeval tv;
-        gettimeofday(&tv,NULL);
-        int start = tv.tv_sec*1000 + tv.tv_usec/1000;
+        // struct timeval tv;
+        // gettimeofday(&tv,NULL);
+        // int start = tv.tv_sec*1000 + tv.tv_usec/1000;
         ret = mCodec->decodeFrame(data, size, &bytesConsumed);
 
         if (ret == IV_SUCCESS) {
@@ -407,9 +407,9 @@ void DecoderAVC::decode(unsigned char *buf, unsigned int buflen, unsigned int ti
         data += bytesConsumed;
         size -= bytesConsumed;
 
-        gettimeofday(&tv,NULL);
-        int stop = tv.tv_sec*1000 + tv.tv_usec/1000;
-        printf("decoder frame total %d cosumebtye %d  decodetime %d\n", buflen, buflen - size, stop - start);
+        // gettimeofday(&tv,NULL);
+        // int stop = tv.tv_sec*1000 + tv.tv_usec/1000;
+        // printf("decoder frame total %d cosumebtye %d  decodetime %d\n", buflen, buflen - size, stop - start);
     }
 
 
