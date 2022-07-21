@@ -18,8 +18,7 @@
   },
   "homepage": "https://github.com/tdcr5/avplayer#readme",
   "dependencies": {
-    "gl-matrix": "^3.4.3",
-    "vconsole": "^3.14.6"
+    "gl-matrix": "^3.4.3"
   },
   "devDependencies": {
     "@babel/plugin-external-helpers": "^7.17.12",
