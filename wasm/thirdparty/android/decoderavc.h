@@ -14,6 +14,8 @@ class DecoderAVC : public DecoderVideo
          int      mVideoWith;          
          int      mVideoHeight;
          unsigned char* mYUV;
+
+         int mFrameCount;
        
         AVCCodec* mCodec;
 

@@ -17,6 +17,8 @@
 #include "log.h"
 #include "decoderavc.h"
 
+#define K_DISCARD_FRAMES 2
+
 #define NELEMENTS(x) (sizeof(x) / sizeof(x[0]))
 #define ivd_api_function ih264d_api_function
 
@@ -307,6 +309,8 @@ IV_API_CALL_STATUS_T AVCCodec::decodeFrame(const uint8_t *data, size_t size,
 
   /* In case of change in resolution, reset codec and feed the same data again
    */
+//   printf("decodeFrame ret %d dec_op.u4_error_code 0x%x e_pic_type 0x%x\n", ret, dec_op.u4_error_code, dec_op.e_pic_type);
+
   if (IVD_RES_CHANGED == (dec_op.u4_error_code & 0xFF)) {
     resetCodec();
     ret = ivd_api_function(mCodec, (void *)&dec_ip, (void *)&dec_op);
@@ -329,7 +333,7 @@ IV_API_CALL_STATUS_T AVCCodec::decodeFrame(const uint8_t *data, size_t size,
 
 
 
-DecoderAVC::DecoderAVC(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL) {
+DecoderAVC::DecoderAVC(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL), mFrameCount(0) {
 
    mCodec = new AVCCodec(IV_YUV_420P, 1);
 }
@@ -362,21 +366,21 @@ void DecoderAVC::decode(unsigned char *buf, unsigned int buflen, unsigned int ti
 
     if (mVideoWith == 0 || mVideoHeight == 0) {
 
-          mCodec->decodeHeader(buf, buflen);
+        mCodec->decodeHeader(buf, buflen);
 
-          mVideoWith = mCodec->mWidth;
-          mVideoHeight = mCodec->mHeight;
+        mVideoWith = mCodec->mWidth;
+        mVideoHeight = mCodec->mHeight;
 
-          if (mVideoWith == 0) {
-              return;
-          }
+        if (mVideoWith == 0) {
+            return;
+        }
 
-          mCodec->setParams(IVD_DECODE_FRAME);
-          mCodec->allocFrame();
+        mCodec->setParams(IVD_DECODE_FRAME);
+        mCodec->allocFrame();
 
-          mYUV = (unsigned char*)avc_iv_aligned_malloc(NULL, 16, mVideoWith*mVideoHeight*3/2);
+        mYUV = (unsigned char*)avc_iv_aligned_malloc(NULL, 16, mVideoWith*mVideoHeight*3/2);
 
-          mObserver->videoInfo(mVideoWith, mVideoHeight);
+        mObserver->videoInfo(mVideoWith, mVideoHeight);
     }
 
 
@@ -400,7 +404,13 @@ void DecoderAVC::decode(unsigned char *buf, unsigned int buflen, unsigned int ti
             memcpy(mYUV + resolution, mCodec->mOutBufHandle.pu1_bufs[1], resolution>>2);
             memcpy(mYUV + resolution*5/4, mCodec->mOutBufHandle.pu1_bufs[2], resolution>>2);
 
-            mObserver->yuvData(mYUV, timestamp);
+            mFrameCount++;
+
+            //前面几帧会绿
+            if (mFrameCount > K_DISCARD_FRAMES) {
+                mObserver->yuvData(mYUV, timestamp);
+            }
+
         } 
 
         bytesConsumed = std::min(size, bytesConsumed);
