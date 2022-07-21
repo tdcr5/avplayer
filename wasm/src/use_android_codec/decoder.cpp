@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "decoderavc.h"
+#include "decoderhevc.h"
 
 using namespace emscripten;
 using namespace std;
@@ -115,7 +116,7 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
 
         case Video_H265: {
 
-
+            mDecoderV = new DecoderHEVC(this);
             break;
         }
     
@@ -135,8 +136,6 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
 
 void  VideoDecoder::decode(string input, u32 timestamp)
 {
-
-     
 
     if (!mInit) {
 

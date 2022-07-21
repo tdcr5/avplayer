@@ -2396,16 +2396,16 @@
 	  UnboundTypeError = Module["UnboundTypeError"] = extendError(Error, "UnboundTypeError");
 	  init_emval();
 	  var asmLibraryArg = {
-	    "d": ___assert_fail,
+	    "a": ___assert_fail,
 	    "p": __embind_register_bigint,
 	    "n": __embind_register_bool,
 	    "m": __embind_register_class,
 	    "g": __embind_register_class_constructor,
-	    "c": __embind_register_class_function,
+	    "d": __embind_register_class_function,
 	    "t": __embind_register_emval,
 	    "l": __embind_register_float,
-	    "b": __embind_register_integer,
-	    "a": __embind_register_memory_view,
+	    "c": __embind_register_integer,
+	    "b": __embind_register_memory_view,
 	    "k": __embind_register_std_string,
 	    "f": __embind_register_std_wstring,
 	    "o": __embind_register_void,

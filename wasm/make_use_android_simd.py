@@ -32,9 +32,9 @@ emcc_args = [
 
 print ('building...')
 
-emcc_args = ['thirdparty/android/libs/libavcdec-simd.a']+emcc_args
+emcc_args = ['thirdparty/android/libs/libavcdec-simd.a', 'thirdparty/android/libs/libhevcdec-simd.a']+emcc_args
 
-os.system('emcc ./src/use_android_codec/decoder.cpp ./thirdparty/android/log.c ./thirdparty/android/deocdervideo.cpp ./thirdparty/android/decoderavc.cpp ' +
+os.system('emcc ./src/use_android_codec/decoder.cpp ./thirdparty/android/log.c ./thirdparty/android/deocdervideo.cpp ./thirdparty/android/decoderavc.cpp ./thirdparty/android/decoderhevc.cpp ' +
           (' '.join(emcc_args)) + ' -o '+args['-o']+'.js')
 
 print ('done')
