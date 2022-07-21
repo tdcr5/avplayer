@@ -65,9 +65,9 @@ class FetchStream extends EventEmitter {
 
         this.stop();
 
-        if (this._player._options._retryCnt >= 0 && this._retryCnt > this.this._player._options._retryCnt) {
+        if (this._player._options.retryCnt >= 0 && this._retryCnt > this._player._options.retryCnt) {
 
-            this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} finish because reach retryCnt, Cnt ${this._retryCnt} optionsCnt ${this._player._options._retryCnt}`);
+            this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} finish because reach retryCnt, Cnt ${this._retryCnt} optionsCnt ${this._player._options.retryCnt}`);
            
             this.emit('finish');
             return;

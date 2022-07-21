@@ -154,6 +154,7 @@ class MediaCenterInternal {
 
         this._demuxer.on('audioinfo', (audioinfo) => {
 
+
             this._logger.info('MediaCenterInternal', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
             this._aDecoder.setCodec(audioinfo.atype, audioinfo.extradata);
@@ -171,7 +172,6 @@ class MediaCenterInternal {
         })
 
         this._demuxer.on('audiodata', (packet) => {
-
 
             this._aframerate++;
             this._abitrate += packet.payload.length;
@@ -239,7 +239,7 @@ class MediaCenterInternal {
 
         if (avpacket.avtype === AVType.Video) {
 
-            this._vDecoder.decode(avpacket.payload, avpacket.timestamp);
+            this._vDecoder.decode(avpacket.payload, avpacket.iskeyframe ? 1 : 0, avpacket.timestamp);
 
         } else {
 
@@ -262,7 +262,7 @@ class MediaCenterInternal {
         avpacket.timestamp = timestamp,
         avpacket.iskeyframe = keyframe;
 
-        if (keyframe && this._gop.length > 80) {
+        if (keyframe && this._gop.length > 100000) {
 
             let bf = false;
             let i = 0;

@@ -21,7 +21,7 @@
             <option value="normal">正常解码</option>
             <option value="simd">支持SIMD解码</option>
         </select>
-        <input id="address" type="text" style="width: 300px;"value="http://192.168.6.18:8080/live/a123456.flv" />
+        <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" />
         <button id="play" type="button">播放</button>
         <button id="stop" type="button">停止</button>
     </div>
@@ -68,7 +68,9 @@ function main() {
             width:540,
             height:960,
             renderMode:selectCtrl.options[selectCtrl.options.selectedIndex].value,
-            decoderMode:decoderCtrl.options[decoderCtrl.options.selectedIndex].value
+            decoderMode:decoderCtrl.options[decoderCtrl.options.selectedIndex].value,
+            retryCnt:0
+
         };
 
         player = new AVPlayer(options);

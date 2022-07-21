@@ -55,7 +55,7 @@ class MediaCenter extends EventEmitter  {
                 case WORKER_EVENT_TYPE.destroyed: {
 
                     this._mediacenterWorker.terminate();
-                    this._jitterBuffer.destroy();
+                     this._jitterBuffer.destroy();
                     break;
                 }
 
@@ -63,7 +63,7 @@ class MediaCenter extends EventEmitter  {
 
                     this.emit('videoinfo', msg.vtype, msg.width, msg.height);
 
-                   // this._jitterBuffer.playVideoOnly();
+                //    this._jitterBuffer.playVideoOnly();
                     break;
                 }
 

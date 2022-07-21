@@ -17,7 +17,7 @@
 #include "log.h"
 #include "decoderhevc.h"
 
-
+#define K_DISCARD_FRAMES 2
 #define NELEMENTS(x) (sizeof(x) / sizeof(x[0]))
 #define ivd_api_function ihevcd_cxa_api_function
 const IV_COLOR_FORMAT_T supportedColorFormats[] = {
@@ -331,7 +331,7 @@ IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size,
 
 
 
-DecoderHEVC::DecoderHEVC(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL) {
+DecoderHEVC::DecoderHEVC(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL),mFrameCount(0) {
 
    mCodec = new HEVCCodec(IV_YUV_420P, 1);
 }
@@ -402,7 +402,12 @@ void DecoderHEVC::decode(unsigned char *buf, unsigned int buflen, unsigned int t
             memcpy(mYUV + resolution, mCodec->mOutBufHandle.pu1_bufs[1], resolution>>2);
             memcpy(mYUV + resolution*5/4, mCodec->mOutBufHandle.pu1_bufs[2], resolution>>2);
 
-            mObserver->yuvData(mYUV, timestamp);
+            mFrameCount++;
+
+            //前面几帧会绿
+            if (mFrameCount > K_DISCARD_FRAMES) {
+                mObserver->yuvData(mYUV, timestamp);
+            }
         } 
 
         bytesConsumed = std::min(size, bytesConsumed);

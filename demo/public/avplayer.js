@@ -2542,7 +2542,7 @@ void main(void) {
 
             case WORKER_EVENT_TYPE.videoInfo:
               {
-                this.emit('videoinfo', msg.vtype, msg.width, msg.height); // this._jitterBuffer.playVideoOnly();
+                this.emit('videoinfo', msg.vtype, msg.width, msg.height); //    this._jitterBuffer.playVideoOnly();
 
                 break;
               }

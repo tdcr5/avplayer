@@ -5393,7 +5393,7 @@
 	    return (Module["dynCall_jiji"] = Module["asm"]["P"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 117861;
+	  Module["_ff_h264_cabac_tables"] = 117829;
 
 	  var calledRun;
 
@@ -11642,6 +11642,12 @@
 	  /** @type {function(...*):?} */
 
 
+	  var _malloc = Module["_malloc"] = function () {
+	    return (_malloc = Module["_malloc"] = Module["asm"]["malloc"]).apply(null, arguments);
+	  };
+	  /** @type {function(...*):?} */
+
+
 	  var ___errno_location = Module["___errno_location"] = function () {
 	    return (___errno_location = Module["___errno_location"] = Module["asm"]["__errno_location"]).apply(null, arguments);
 	  };
@@ -11656,12 +11662,6 @@
 
 	  Module["___embind_register_native_and_builtin_types"] = function () {
 	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["__embind_register_native_and_builtin_types"]).apply(null, arguments);
-	  };
-	  /** @type {function(...*):?} */
-
-
-	  var _malloc = Module["_malloc"] = function () {
-	    return (_malloc = Module["_malloc"] = Module["asm"]["malloc"]).apply(null, arguments);
 	  };
 	  /** @type {function(...*):?} */
 
@@ -11712,7 +11712,7 @@
 	    return (Module["dynCall_jiji"] = Module["asm"]["dynCall_jiji"]).apply(null, arguments);
 	  };
 
-	  Module['_ff_h264_cabac_tables'] = 266917; // === Auto-generated postamble setup entry stuff ===
+	  Module['_ff_h264_cabac_tables'] = 267045; // === Auto-generated postamble setup entry stuff ===
 
 
 	  var calledRun;
@@ -12631,13 +12631,7 @@
 
 	            if (frametype === FrameType.KeyFrame) {
 	              if (avcpackettype === AVCPacketType.AVCSequenceHeader) {
-	                let obj = ParseSPSAndPPS(remain.slice(0, this._needlen));
-	                this._sps = obj.sps;
-	                this._pps = obj.pps;
-
-	                this._player._logger.info('FlvDemux', `parse sps:${this._sps[0] & 0x1F} pps:${this._pps[0] & 0x1F}`); //avcseq
-
-
+	                //avcseq
 	                let info = readAVCSpecificConfig(remain.slice(0, this._needlen));
 	                this._videoinfo.vtype = codecid === CodecID.AVC ? VideoType.H264 : VideoType.H265;
 	                this._videoinfo.width = info.width;
@@ -12648,7 +12642,8 @@
 	                //I Frame
 	                let vframe = remain.slice(5, this._needlen);
 	                let packet = new AVPacket();
-	                packet.payload = convertAVCCtoAnnexB(vframe);
+	                packet.payload = vframe; //convertAVCCtoAnnexB(vframe);
+
 	                packet.iskeyframe = true;
 	                packet.timestamp = this._pts;
 	                packet.avtype = AVType.Video; // packet.nals = SplitBufferToNals(vframe);
@@ -12660,7 +12655,8 @@
 	                //P Frame
 	                let vframe = remain.slice(5, this._needlen);
 	                let packet = new AVPacket();
-	                packet.payload = convertAVCCtoAnnexB(vframe);
+	                packet.payload = vframe; //convertAVCCtoAnnexB(vframe);
+
 	                packet.iskeyframe = false;
 	                packet.timestamp = this._pts;
 	                packet.avtype = AVType.Video; // packet.nals = SplitBufferToNals(vframe);
@@ -12735,61 +12731,6 @@
 
 	}
 
-	function convertAVCCtoAnnexB(buffer) {
-	  let offset = 0;
-	  const tmp = new ArrayBuffer(4);
-	  const dv = new DataView(tmp);
-
-	  while (offset < buffer.length) {
-	    dv.setUint8(0, buffer[offset + 3]);
-	    dv.setUint8(1, buffer[offset + 2]);
-	    dv.setUint8(2, buffer[offset + 1]);
-	    dv.setUint8(3, buffer[offset]);
-	    let nallen = dv.getUint32(0, true);
-	    buffer[offset] = 0;
-	    buffer[offset + 1] = 0;
-	    buffer[offset + 2] = 0;
-	    buffer[offset + 3] = 1;
-	    offset += 4;
-	    buffer[offset] & 0x1F; // console.log(`nal len ${nallen} type:${naltype}`)
-
-	    offset += nallen;
-	  }
-
-	  if (offset != buffer.length) {
-	    console.error(`parse nal error, offset:${offset} buflen:${buffer.length}`);
-	  }
-
-	  return buffer;
-	}
-
-	function ParseSPSAndPPS(videData) {
-	  let avcSequenceHeader = new Uint8Array(videData.length - 5);
-	  avcSequenceHeader.set(videData.slice(5));
-	  const tmp = new ArrayBuffer(2);
-	  const dv = new DataView(tmp);
-	  let offset = 5;
-	  avcSequenceHeader[offset] & 0x1F;
-	  offset += 1;
-	  dv.setInt8(0, avcSequenceHeader[offset + 1]);
-	  dv.setInt8(1, avcSequenceHeader[offset]);
-	  let spslen = dv.getUint16(0, true);
-	  offset += 2;
-	  let sps = avcSequenceHeader.slice(offset, offset + spslen);
-	  offset += spslen;
-	  avcSequenceHeader[offset];
-	  offset += 1;
-	  dv.setInt8(0, avcSequenceHeader[offset + 1]);
-	  dv.setInt8(1, avcSequenceHeader[offset]);
-	  let ppslen = dv.getUint16(0, true);
-	  offset += 2;
-	  let pps = avcSequenceHeader.slice(offset, offset + ppslen);
-	  return {
-	    sps,
-	    pps
-	  };
-	}
-
 	class FetchStream extends EventEmitter {
 	  _player = undefined;
 	  _abort = undefined;
@@ -12839,8 +12780,8 @@
 	  retry() {
 	    this.stop();
 
-	    if (this._player._options._retryCnt >= 0 && this._retryCnt > this.this._player._options._retryCnt) {
-	      this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} finish because reach retryCnt, Cnt ${this._retryCnt} optionsCnt ${this._player._options._retryCnt}`);
+	    if (this._player._options.retryCnt >= 0 && this._retryCnt > this._player._options.retryCnt) {
+	      this._player._logger.warn('FetchStream', `fetch url ${this._player._options.url} finish because reach retryCnt, Cnt ${this._retryCnt} optionsCnt ${this._player._options.retryCnt}`);
 
 	      this.emit('finish');
 	      return;
@@ -13044,7 +12985,7 @@
 	    let avpacket = this._gop.shift();
 
 	    if (avpacket.avtype === AVType.Video) {
-	      this._vDecoder.decode(avpacket.payload, avpacket.timestamp);
+	      this._vDecoder.decode(avpacket.payload, avpacket.iskeyframe ? 1 : 0, avpacket.timestamp);
 	    } else {
 	      this._aDecoder.decode(avpacket.payload, avpacket.timestamp);
 	    }
@@ -13060,7 +13001,7 @@
 	    avpacket.payload = videodata;
 	    avpacket.timestamp = timestamp, avpacket.iskeyframe = keyframe;
 
-	    if (keyframe && this._gop.length > 80) {
+	    if (keyframe && this._gop.length > 100000) {
 	      let bf = false;
 	      let i = 0;
 

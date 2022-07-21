@@ -136,7 +136,7 @@ public:
 
     void setCodec(u32 vtype, string extra);
 
-    void decode(string input, u32 timestamp);
+    void decode(string input, u32 isKeyFrame, u32 timestamp);
 
     virtual void clear();
     virtual void frameReady(u32 timestamp);
@@ -220,7 +220,7 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
 }
 
 
-void  VideoDecoder::decode(string input, u32 timestamp)
+void  VideoDecoder::decode(string input, u32 isKeyFrame, u32 timestamp)
 {
 
   //   printf("VideoDecoder::decode input %d, timestamp %d \n", input.length(), timestamp);

@@ -196,16 +196,10 @@ class FLVDemuxer extends EventEmitter {
 
                             if (avcpackettype === AVCPacketType.AVCSequenceHeader) {
 
-                                 let obj = ParseSPSAndPPS(remain.slice(0, this._needlen));
-
-                                 this._sps = obj.sps;
-                                 this._pps = obj.pps;
-
-                                 this._player._logger.info('FlvDemux', `parse sps:${this._sps[0]&0x1F} pps:${this._pps[0]&0x1F}`)
-
                                 //avcseq
                                 let info = readAVCSpecificConfig(remain.slice(0, this._needlen));
 
+                
                                 this._videoinfo.vtype = codecid === CodecID.AVC ? VideoType.H264 : VideoType.H265;
                                 this._videoinfo.width = info.width;
                                 this._videoinfo.height = info.height
@@ -218,7 +212,7 @@ class FLVDemuxer extends EventEmitter {
                                 let vframe = remain.slice(5, this._needlen);
 
                                 let packet = new AVPacket();
-                                packet.payload = convertAVCCtoAnnexB(vframe);;
+                                packet.payload = vframe;//convertAVCCtoAnnexB(vframe);
                                 packet.iskeyframe = true;
                                 packet.timestamp = this._pts;
                                 packet.avtype = AVType.Video;
@@ -241,7 +235,7 @@ class FLVDemuxer extends EventEmitter {
 
                                 
                                 let packet = new AVPacket();
-                                packet.payload = convertAVCCtoAnnexB(vframe);
+                                packet.payload = vframe;//convertAVCCtoAnnexB(vframe);
                                 packet.iskeyframe = false;
                                 packet.timestamp = this._pts;
                                 packet.avtype = AVType.Video;
@@ -361,7 +355,6 @@ class FLVDemuxer extends EventEmitter {
 function convertAVCCtoAnnexB(buffer) {
 
     let offset = 0;
-
     const tmp = new ArrayBuffer(4);
     const dv = new DataView(tmp);
 
@@ -380,9 +373,11 @@ function convertAVCCtoAnnexB(buffer) {
         buffer[offset+3] = 1;
 
         offset += 4;
-        let naltype = buffer[offset]&0x1F;
+        // let naltype = buffer[offset]&0x1F;
 
-       // console.log(`nal len ${nallen} type:${naltype}`)
+        let naltype = (buffer[offset]&0x7E)>>1;
+
+        console.log(`nal len ${nallen} type:${naltype}`)
         offset += nallen;
     }
 
@@ -390,10 +385,9 @@ function convertAVCCtoAnnexB(buffer) {
 
         console.error(`parse nal error, offset:${offset} buflen:${buffer.length}`)
     } else {
-      //  console.log(`parse nal suc, offset:${offset} buflen:${buffer.length}`)
+        console.log(`parse nal suc, offset:${offset} buflen:${buffer.length}`)
 
     }
-
 
     return buffer;
 }
