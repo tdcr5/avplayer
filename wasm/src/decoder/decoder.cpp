@@ -234,17 +234,17 @@ void  VideoDecoder::decode(string input, u32 timestamp)
     u32 bufferLen = input.length();
     u8* buffer = (u8*)input.data();
 
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    int start = tv.tv_sec*1000 + tv.tv_usec/1000;
+    // struct timeval tv;
+    // gettimeofday(&tv,NULL);
+    // int start = tv.tv_sec*1000 + tv.tv_usec/1000;
 
 
     Decoder::decode(buffer, bufferLen, timestamp);
 
-    gettimeofday(&tv,NULL);
-    int stop = tv.tv_sec*1000 + tv.tv_usec/1000;
+    // gettimeofday(&tv,NULL);
+    // int stop = tv.tv_sec*1000 + tv.tv_usec/1000;
 
-     printf("decoder frame  decodetime %d\n", stop - start);
+    //  printf("decoder frame  decodetime %d\n", stop - start);
 
 }
 
