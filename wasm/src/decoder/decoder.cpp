@@ -312,7 +312,7 @@ void  VideoDecoder::frameReady(u32 timestamp) {
 
   //  printf("C yuv[0-5] %d  %d  %d  %d %d %d \n", mYUV[0], mYUV[1], mYUV[2], mYUV[3], mYUV[4], mYUV[5]);
 
-    printf("yuvData jspts %d ffpts %d pictype %d \n", timestamp, (u32)mFrame->pts, mFrame->pict_type);
+   // printf("yuvData jspts %d ffpts %d pictype %d \n", timestamp, (u32)mFrame->pts, mFrame->pict_type);
 
     mJsObject.call<void>("yuvData", (u32)mYUV, (u32)mFrame->pts);
 
