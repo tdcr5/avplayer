@@ -320,6 +320,15 @@ class JitterBuffer extends EventEmitter {
 
     tryDropFrames() {
 
+
+        if (this._player._options.playMode !== 'live') {
+
+          //  this._player._logger.error('jitterbuffer',`not drop frame!!!`);
+            return;
+        }
+
+      //  this._player._logger.error('jitterbuffer',`drop frame [${this._player._options.playMode}] !!!`);
+
         let dropDelay = this._player._options.delay*delayScale;
 
         if (this._strategy === DispatchStrategy.playVideoOnlyDriven) {

@@ -106,6 +106,7 @@ void Decoder::decode(u8* buffer, u32 bufferLen, u32 timestamp) {
     int ret = 0;
     mPacket->data = buffer;
     mPacket->size = bufferLen;
+    mPacket->pts = timestamp;
 
     ret = avcodec_send_packet(mDecCtx, mPacket);
     while (ret >= 0)
@@ -311,7 +312,9 @@ void  VideoDecoder::frameReady(u32 timestamp) {
 
   //  printf("C yuv[0-5] %d  %d  %d  %d %d %d \n", mYUV[0], mYUV[1], mYUV[2], mYUV[3], mYUV[4], mYUV[5]);
 
-    mJsObject.call<void>("yuvData", (u32)mYUV, timestamp);
+    printf("yuvData jspts %d ffpts %d pictype %d \n", timestamp, (u32)mFrame->pts, mFrame->pict_type);
+
+    mJsObject.call<void>("yuvData", (u32)mYUV, (u32)mFrame->pts);
 
 }
 
