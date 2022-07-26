@@ -153,9 +153,9 @@
 	  var err = Module["printErr"] || console.warn.bind(console);
 	  Object.assign(Module, moduleOverrides);
 	  moduleOverrides = null;
-	  if (Module["arguments"]) Module["arguments"];
+	  if (Module["arguments"]) ;
 	  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
-	  if (Module["quit"]) Module["quit"];
+	  if (Module["quit"]) ;
 	  var POINTER_SIZE = 4;
 
 	  var wasmBinary;
@@ -636,7 +636,24 @@
 
 	  function callRuntimeCallbacks(callbacks) {
 	    while (callbacks.length > 0) {
-	      callbacks.shift()(Module);
+	      var callback = callbacks.shift();
+
+	      if (typeof callback == "function") {
+	        callback(Module);
+	        continue;
+	      }
+
+	      var func = callback.func;
+
+	      if (typeof func == "number") {
+	        if (callback.arg === undefined) {
+	          getWasmTableEntry(func)();
+	        } else {
+	          getWasmTableEntry(func)(callback.arg);
+	        }
+	      } else {
+	        func(callback.arg === undefined ? null : callback.arg);
+	      }
 	    }
 	  }
 
@@ -3999,7 +4016,7 @@
 	    }
 
 	    if (!handle.$$) {
-	      throwBindingError('Cannot pass "' + embindRepr(handle) + '" as a ' + this.name);
+	      throwBindingError('Cannot pass "' + _embind_repr(handle) + '" as a ' + this.name);
 	    }
 
 	    if (!handle.$$.ptr) {
@@ -4033,7 +4050,7 @@
 	    }
 
 	    if (!handle.$$) {
-	      throwBindingError('Cannot pass "' + embindRepr(handle) + '" as a ' + this.name);
+	      throwBindingError('Cannot pass "' + _embind_repr(handle) + '" as a ' + this.name);
 	    }
 
 	    if (!handle.$$.ptr) {
@@ -4100,7 +4117,7 @@
 	    }
 
 	    if (!handle.$$) {
-	      throwBindingError('Cannot pass "' + embindRepr(handle) + '" as a ' + this.name);
+	      throwBindingError('Cannot pass "' + _embind_repr(handle) + '" as a ' + this.name);
 	    }
 
 	    if (!handle.$$.ptr) {
@@ -4117,7 +4134,7 @@
 	  }
 
 	  function simpleReadValueFromPointer(pointer) {
-	    return this["fromWireType"](HEAP32[pointer >> 2]);
+	    return this["fromWireType"](HEAPU32[pointer >> 2]);
 	  }
 
 	  function RegisteredPointer_getPointee(ptr) {
@@ -4198,8 +4215,7 @@
 	      return dynCallLegacy(sig, ptr, args);
 	    }
 
-	    var rtn = getWasmTableEntry(ptr).apply(null, args);
-	    return rtn;
+	    return getWasmTableEntry(ptr).apply(null, args);
 	  }
 
 	  function getDynCaller(sig, ptr) {
@@ -4338,7 +4354,7 @@
 	    var array = [];
 
 	    for (var i = 0; i < count; i++) {
-	      array.push(HEAPU32[firstElement + i * 4 >> 2]);
+	      array.push(HEAP32[(firstElement >> 2) + i]);
 	    }
 
 	    return array;
@@ -4617,7 +4633,7 @@
 	    });
 	  }
 
-	  function embindRepr(v) {
+	  function _embind_repr(v) {
 	    if (v === null) {
 	      return "null";
 	    }
@@ -4764,14 +4780,13 @@
 	      name: name,
 	      "fromWireType": function (value) {
 	        var length = HEAPU32[value >> 2];
-	        var payload = value + 4;
 	        var str;
 
 	        if (stdStringIsUTF8) {
-	          var decodeStartPtr = payload;
+	          var decodeStartPtr = value + 4;
 
 	          for (var i = 0; i <= length; ++i) {
-	            var currentBytePtr = payload + i;
+	            var currentBytePtr = value + 4 + i;
 
 	            if (i == length || HEAPU8[currentBytePtr] == 0) {
 	              var maxRead = currentBytePtr - decodeStartPtr;
@@ -4791,7 +4806,7 @@
 	          var a = new Array(length);
 
 	          for (var i = 0; i < length; ++i) {
-	            a[i] = String.fromCharCode(HEAPU8[payload + i]);
+	            a[i] = String.fromCharCode(HEAPU8[value + 4 + i]);
 	          }
 
 	          str = a.join("");
@@ -4806,7 +4821,7 @@
 	          value = new Uint8Array(value);
 	        }
 
-	        var length;
+	        var getLength;
 	        var valueIsOfTypeString = typeof value == "string";
 
 	        if (!(valueIsOfTypeString || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Int8Array)) {
@@ -4814,18 +4829,19 @@
 	        }
 
 	        if (stdStringIsUTF8 && valueIsOfTypeString) {
-	          length = lengthBytesUTF8(value);
+	          getLength = () => lengthBytesUTF8(value);
 	        } else {
-	          length = value.length;
+	          getLength = () => value.length;
 	        }
 
-	        var base = _malloc(4 + length + 1);
+	        var length = getLength();
 
-	        var ptr = base + 4;
-	        HEAPU32[base >> 2] = length;
+	        var ptr = _malloc(4 + length + 1);
+
+	        HEAPU32[ptr >> 2] = length;
 
 	        if (stdStringIsUTF8 && valueIsOfTypeString) {
-	          stringToUTF8(value, ptr, length + 1);
+	          stringToUTF8(value, ptr + 4, length + 1);
 	        } else {
 	          if (valueIsOfTypeString) {
 	            for (var i = 0; i < length; ++i) {
@@ -4837,20 +4853,20 @@
 	                throwBindingError("String has UTF-16 code units that do not fit in 8 bits");
 	              }
 
-	              HEAPU8[ptr + i] = charCode;
+	              HEAPU8[ptr + 4 + i] = charCode;
 	            }
 	          } else {
 	            for (var i = 0; i < length; ++i) {
-	              HEAPU8[ptr + i] = value[i];
+	              HEAPU8[ptr + 4 + i] = value[i];
 	            }
 	          }
 	        }
 
 	        if (destructors !== null) {
-	          destructors.push(_free, base);
+	          destructors.push(_free, ptr);
 	        }
 
-	        return base;
+	        return ptr;
 	      },
 	      "argPackAdvance": 8,
 	      "readValueFromPointer": simpleReadValueFromPointer,
@@ -5377,7 +5393,7 @@
 	    return (Module["dynCall_jiji"] = Module["asm"]["P"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 117861;
+	  Module["_ff_h264_cabac_tables"] = 117829;
 
 	  var calledRun;
 
@@ -5644,9 +5660,9 @@
 	  // expected to arrive, and second, by using a local everywhere else that can be
 	  // minified.
 
-	  if (Module['arguments']) Module['arguments'];
+	  if (Module['arguments']) ;
 	  if (Module['thisProgram']) thisProgram = Module['thisProgram'];
-	  if (Module['quit']) Module['quit']; // perform assertions in shell.js after we set up out() and err(), as otherwise if an assertion fails it cannot print the message
+	  if (Module['quit']) ; // perform assertions in shell.js after we set up out() and err(), as otherwise if an assertion fails it cannot print the message
 	  var POINTER_SIZE = 4;
 	  // Documentation for the public APIs defined in this file must be updated in:
 	  //    site/source/docs/api_reference/preamble.js.rst
