@@ -17,7 +17,6 @@
 #include "log.h"
 #include "decoderavc.h"
 
-#define K_DISCARD_FRAMES 2
 
 #define NELEMENTS(x) (sizeof(x) / sizeof(x[0]))
 #define ivd_api_function ih264d_api_function
@@ -71,8 +70,8 @@ class AVCCodec {
   void allocFrame();
   void freeFrame();
   void decodeHeader(const uint8_t *data, size_t size);
-  IV_API_CALL_STATUS_T decodeFrame(const uint8_t *data, size_t size,
-                                   size_t *bytesConsumed);
+  IV_API_CALL_STATUS_T decodeFrame(const uint8_t *data, size_t size, UWORD32 ts,
+                                   size_t *bytesConsumed, IV_PICTURE_CODING_TYPE_T* pictype, UWORD32* pts);
   void setParams(IVD_VIDEO_DECODE_MODE_T mode);
   void setArchitecture(IVD_ARCH_T arch);
 
@@ -287,8 +286,8 @@ void AVCCodec::decodeHeader(const uint8_t *data, size_t size) {
   if (!mHeight) mHeight = 1088;
 }
 
-IV_API_CALL_STATUS_T AVCCodec::decodeFrame(const uint8_t *data, size_t size,
-                                        size_t *bytesConsumed) {
+IV_API_CALL_STATUS_T AVCCodec::decodeFrame(const uint8_t *data, size_t size, UWORD32 ts,
+                                        size_t *bytesConsumed, IV_PICTURE_CODING_TYPE_T* pictype, UWORD32* pts) {
   IV_API_CALL_STATUS_T ret;
   ivd_video_decode_ip_t dec_ip;
   ivd_video_decode_op_t dec_op;
@@ -297,7 +296,7 @@ IV_API_CALL_STATUS_T AVCCodec::decodeFrame(const uint8_t *data, size_t size,
   memset(&dec_op, 0, sizeof(dec_op));
 
   dec_ip.e_cmd = IVD_CMD_VIDEO_DECODE;
-  dec_ip.u4_ts = 0;
+  dec_ip.u4_ts = ts;
   dec_ip.pv_stream_buffer = (void *)data;
   dec_ip.u4_num_Bytes = size;
   dec_ip.u4_size = sizeof(ivd_video_decode_ip_t);
@@ -309,7 +308,10 @@ IV_API_CALL_STATUS_T AVCCodec::decodeFrame(const uint8_t *data, size_t size,
 
   /* In case of change in resolution, reset codec and feed the same data again
    */
-//   printf("decodeFrame ret %d dec_op.u4_error_code 0x%x e_pic_type 0x%x\n", ret, dec_op.u4_error_code, dec_op.e_pic_type);
+  // printf("decodeFrame ret %d dec_op.u4_error_code 0x%x e_pic_type 0x%x  pts %d \n", ret, dec_op.u4_error_code, dec_op.e_pic_type,  dec_op.u4_ts);
+
+  *pictype = dec_op.e_pic_type;
+  *pts = dec_op.u4_ts;
 
   if (IVD_RES_CHANGED == (dec_op.u4_error_code & 0xFF)) {
     resetCodec();
@@ -333,7 +335,7 @@ IV_API_CALL_STATUS_T AVCCodec::decodeFrame(const uint8_t *data, size_t size,
 
 
 
-DecoderAVC::DecoderAVC(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL), mFrameCount(0) {
+DecoderAVC::DecoderAVC(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL) {
 
    mCodec = new AVCCodec(IV_YUV_420P, 1);
 }
@@ -387,6 +389,7 @@ void DecoderAVC::decode(unsigned char *buf, unsigned int buflen, unsigned int ti
     unsigned char * data = buf;
     size_t size = buflen;
 
+   // printf("SIMD AVC Decoder Start ts %d len %d \n", timestamp, buflen);
 
     while (size > 0) {
         IV_API_CALL_STATUS_T ret;
@@ -395,21 +398,22 @@ void DecoderAVC::decode(unsigned char *buf, unsigned int buflen, unsigned int ti
         // struct timeval tv;
         // gettimeofday(&tv,NULL);
         // int start = tv.tv_sec*1000 + tv.tv_usec/1000;
-        ret = mCodec->decodeFrame(data, size, &bytesConsumed);
 
-        if (ret == IV_SUCCESS) {
+        IV_PICTURE_CODING_TYPE_T pictype =  IV_NA_FRAME;
+        UWORD32 pts = 0;
+
+        ret = mCodec->decodeFrame(data, size, timestamp, &bytesConsumed, &pictype, &pts);
+
+        if (ret == IV_SUCCESS && pictype < IV_NA_FRAME && pts > 0) {
 
             int resolution = mVideoWith*mVideoHeight;               
             memcpy(mYUV, mCodec->mOutBufHandle.pu1_bufs[0], resolution);
             memcpy(mYUV + resolution, mCodec->mOutBufHandle.pu1_bufs[1], resolution>>2);
             memcpy(mYUV + resolution*5/4, mCodec->mOutBufHandle.pu1_bufs[2], resolution>>2);
 
-            mFrameCount++;
-
-            //前面几帧会绿
-            if (mFrameCount > K_DISCARD_FRAMES) {
-                mObserver->yuvData(mYUV, timestamp);
-            }
+            mObserver->yuvData(mYUV, pts);
+            
+           // printf("SIMD AVC Decoder Success jsts %d ts %d pictype 0x%x consumebyte %d left %d \n", timestamp, pts, pictype, bytesConsumed, size - bytesConsumed);
 
         } 
 

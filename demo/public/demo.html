@@ -26,12 +26,14 @@
             <option value="playback">录像流</option>
         </select>
         <!-- <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" /> -->
-        <input id="address" type="text" style="width: 300px;"value="http://127.0.0.1:8080/live/a123456.flv" />
+        <!-- <input id="address" type="text" style="width: 300px;"value="https://flv.bdplay.nodemedia.cn/live/bbb_265.flv" /> -->
+        <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" />
+        <!-- <input id="address" type="text" style="width: 300px;"value="http://127.0.0.1:8080/live/a123456.flv" /> -->
         <button id="play" type="button">播放</button>
         <button id="stop" type="button">停止</button>
     </div>
     <div id="container" style="position: relative;">
-        <video id="video" src="./flower.mp4" with=800 height=1000 autoplay=true loop  playsinline=true muted=true></video>
+        <!-- <video id="video" src="./flower.mp4" with=800 height=1000 autoplay=true loop  playsinline=true muted=true></video> -->
     </div>
 
 
@@ -58,7 +60,7 @@ function main() {
 
         console.log(`play btn click rendmode ${selectCtrl.options[selectCtrl.options.selectedIndex].value} decoderMode ${decoderCtrl.options[decoderCtrl.options.selectedIndex].value} playMode ${playCtrl.options[playCtrl.options.selectedIndex].value}`);
 
-       document.getElementById("video").play();
+     //  document.getElementById("video").play();
 
        if (player) {
 
@@ -71,8 +73,8 @@ function main() {
             container: $container,
             url:addrinput.value,
             delay:500,
-            width:1280,
-            height:720,
+            width:960,
+            height:540,
             renderMode:selectCtrl.options[selectCtrl.options.selectedIndex].value,
             decoderMode:decoderCtrl.options[decoderCtrl.options.selectedIndex].value,
             playMode:playCtrl.options[playCtrl.options.selectedIndex].value,

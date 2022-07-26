@@ -69,8 +69,8 @@ class HEVCCodec {
   void allocFrame();
   void freeFrame();
   void decodeHeader(const uint8_t *data, size_t size);
-  IV_API_CALL_STATUS_T decodeFrame(const uint8_t *data, size_t size,
-                                   size_t *bytesConsumed);
+  IV_API_CALL_STATUS_T decodeFrame(const uint8_t *data, size_t size, UWORD32 ts,
+                                   size_t *bytesConsumed, IV_PICTURE_CODING_TYPE_T* pictype, UWORD32* pts);
   void setParams(IVD_VIDEO_DECODE_MODE_T mode);
   void setArchitecture(IVD_ARCH_T arch);
 
@@ -287,8 +287,8 @@ void HEVCCodec::decodeHeader(const uint8_t *data, size_t size) {
   if (!mHeight) mHeight = 1088;
 }
 
-IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size,
-                                        size_t *bytesConsumed) {
+IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size, UWORD32 ts,
+                                        size_t *bytesConsumed, IV_PICTURE_CODING_TYPE_T* pictype, UWORD32* pts) {
   IV_API_CALL_STATUS_T ret;
   ivd_video_decode_ip_t dec_ip;
   ivd_video_decode_op_t dec_op;
@@ -297,7 +297,7 @@ IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size,
   memset(&dec_op, 0, sizeof(dec_op));
 
   dec_ip.e_cmd = IVD_CMD_VIDEO_DECODE;
-  dec_ip.u4_ts = 0;
+  dec_ip.u4_ts = ts;
   dec_ip.pv_stream_buffer = (void *)data;
   dec_ip.u4_num_Bytes = size;
   dec_ip.u4_size = sizeof(ivd_video_decode_ip_t);
@@ -306,6 +306,9 @@ IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size,
   dec_op.u4_size = sizeof(ivd_video_decode_op_t);
 
   ret = ivd_api_function(mCodec, (void *)&dec_ip, (void *)&dec_op);
+
+  *pictype = dec_op.e_pic_type;
+  *pts = dec_op.u4_ts;
 
   /* In case of change in resolution, reset codec and feed the same data again
    */
@@ -388,35 +391,33 @@ void DecoderHEVC::decode(unsigned char *buf, unsigned int buflen, unsigned int t
         IV_API_CALL_STATUS_T ret;
         size_t bytesConsumed;
 
-        struct timeval tv;
-        gettimeofday(&tv,NULL);
-        int start = tv.tv_sec*1000 + tv.tv_usec/1000;
-        ret = mCodec->decodeFrame(data, size, &bytesConsumed);
+        // struct timeval tv;
+        // gettimeofday(&tv,NULL);
+        // int start = tv.tv_sec*1000 + tv.tv_usec/1000;
+
+        IV_PICTURE_CODING_TYPE_T pictype =  IV_NA_FRAME;
+        UWORD32 pts = 0;
+
+        ret = mCodec->decodeFrame(data, size, timestamp, &bytesConsumed, &pictype, &pts);
      
-
-
-        if (ret == IV_SUCCESS) {
+        if (ret == IV_SUCCESS && pictype < IV_NA_FRAME && pts > 0) {
 
             int resolution = mVideoWith*mVideoHeight;               
             memcpy(mYUV, mCodec->mOutBufHandle.pu1_bufs[0], resolution);
             memcpy(mYUV + resolution, mCodec->mOutBufHandle.pu1_bufs[1], resolution>>2);
             memcpy(mYUV + resolution*5/4, mCodec->mOutBufHandle.pu1_bufs[2], resolution>>2);
 
-            mFrameCount++;
-
-            //前面几帧会绿
-            if (mFrameCount > K_DISCARD_FRAMES) {
-                mObserver->yuvData(mYUV, timestamp);
-            }
+            mObserver->yuvData(mYUV, pts);
+            
         } 
 
         bytesConsumed = std::min(size, bytesConsumed);
         data += bytesConsumed;
         size -= bytesConsumed;
 
-        gettimeofday(&tv,NULL);
-        int stop = tv.tv_sec*1000 + tv.tv_usec/1000;
-    //    printf("decoder frame total %d cosumebtye %d  decodetime %d\n", buflen, buflen - size, stop - start);
+        // gettimeofday(&tv,NULL);
+        // int stop = tv.tv_sec*1000 + tv.tv_usec/1000;
+        // printf("decoder frame total %d cosumebtye %d  decodetime %d\n", buflen, buflen - size, stop - start);
     }
 
 
