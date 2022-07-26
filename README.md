@@ -1,7 +1,7 @@
 # avplayer
     avplayer 是一个流媒体播放器，支持http-flv格式流，主要特性
     
-    （1） 视频支持 h264/h265
+    （1） 视频支持 h264/h265, 支持I/P/B帧
     （2） 声音支持aac/pcmu/pcma
     （3） 解码支持两种模式：
             normal: 正常软解码
