@@ -14,8 +14,7 @@ class DecoderHEVC : public DecoderVideo
          int      mVideoWith;          
          int      mVideoHeight;
          unsigned char* mYUV;
-         int mFrameCount;
-       
+
         HEVCCodec* mCodec;
 
 
