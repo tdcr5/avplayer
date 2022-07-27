@@ -334,7 +334,7 @@ IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size, UW
 
 
 
-DecoderHEVC::DecoderHEVC(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL),mFrameCount(0) {
+DecoderHEVC::DecoderHEVC(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL) {
 
    mCodec = new HEVCCodec(IV_YUV_420P, 1);
 }
@@ -408,6 +408,8 @@ void DecoderHEVC::decode(unsigned char *buf, unsigned int buflen, unsigned int t
             memcpy(mYUV + resolution*5/4, mCodec->mOutBufHandle.pu1_bufs[2], resolution>>2);
 
             mObserver->yuvData(mYUV, pts);
+
+           //  printf("SIMD AVC Decoder Success jsts %d ts %d pictype 0x%x consumebyte %d left %d \n", timestamp, pts, pictype, bytesConsumed, size - bytesConsumed);
             
         } 
 
