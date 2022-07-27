@@ -1,4 +1,4 @@
-import Module from './decoder/decoder'
+import Module from './decoder/decoder_simd'
 import {WORKER_EVENT_TYPE, WORKER_SEND_TYPE} from "./constant";
 import MediaCenterInternal from "./mediaCenterInternal";
 
@@ -28,7 +28,7 @@ Module.postRun = function () {
 
             case WORKER_SEND_TYPE.init: {
 
-                mcinternal = new MediaCenterInternal(JSON.parse(msg.options), Module);
+                mcinternal = new MediaCenterInternal(JSON.parse(msg.options),Module);
                 postMessage({cmd: WORKER_EVENT_TYPE.inited});
 
                 break;

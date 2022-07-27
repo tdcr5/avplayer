@@ -107,6 +107,14 @@ export default [
             file: isProd ? 'dist/worker.js' : 'demo/public/worker.js',
         },
         plugins: []
+    },
+    {
+        input: 'src/mediacenter_worker_simd.js',
+        output: {
+            name: 'worker',
+            file: isProd ? 'dist/worker_simd.js' : 'demo/public/worker_simd.js',
+        },
+        plugins: []
     }
 ].map(config => {
     return {
