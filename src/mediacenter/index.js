@@ -18,7 +18,11 @@ class MediaCenter extends EventEmitter  {
 
         this._player._logger.info('mediacenter', `start worker thread ${player._options.decoder}`);
 
-        this._mediacenterWorker = new Worker(player._options.decoder, {name:player._options.decoderMode});
+        let decoder = player._options.decoder;
+        if(player._options.decoderMode === 'simd'){
+            decoder = decoder.replace('worker','worker_simd')
+        }
+        this._mediacenterWorker = new Worker(decoder, {name: player._options.decoderMode});
 
         this._mediacenterWorker.onmessageerror = (event) => {
 
